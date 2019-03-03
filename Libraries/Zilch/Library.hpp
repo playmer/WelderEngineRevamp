@@ -728,6 +728,34 @@ ZeroSharedTemplate void ForEachFunction(bool isStatic, const LibraryArray& libra
   // Now walk through extension functions
   ForEachExtensionFunction(isStatic, libraries, type, functor);
 }
+
+template <typename FunctionSignature>
+class ZeroShared FunctionBuilder
+{
+  FunctionBuilder()
+  {
+  }
+
+private:
+
+};
+
+template <typename T>
+class ZeroShared TypeBuilder
+{
+  TypeBuilder(LibraryBuilder& aBuilder, Type& aType) : mBuilder(aBuilder), mType(aType)
+  {
+  }
+
+  void Method()
+  {
+  }
+
+private:
+  LibraryBuilder& mBuilder;
+  Type& mType;
+};
+
 } // namespace Zilch
 
 namespace Zero

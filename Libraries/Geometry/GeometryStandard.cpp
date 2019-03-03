@@ -22,6 +22,8 @@ ZilchDefineExternalBaseType(Ray, TypeCopyMode::ValueType, builder, type)
 
 ZilchDefineExternalBaseType(Segment, TypeCopyMode::ValueType, builder, type)
 {
+  TypeBuilder<Segment> typeBuilder;
+
   ZilchBindDefaultCopyDestructor();
   ZilchFullBindConstructor(builder, type, ZilchSelf, "start, end", Vec3Param, Vec3Param);
 
@@ -32,6 +34,10 @@ ZilchDefineExternalBaseType(Segment, TypeCopyMode::ValueType, builder, type)
   ZilchFullBindMethod(builder, type, &Segment::GetTValue, ZilchNoOverload, "GetTValue", "point")->Description =
       ZilchDocumentString("Returns the t-value that would result in the given "
                           "point projected onto the segment.");
+
+  typeBuilder.Method();
+
+
   type->ToStringFunction = Zilch::BoundTypeToGlobalToString<Segment>;
   type->AddAttribute(ExportDocumentation);
 }
