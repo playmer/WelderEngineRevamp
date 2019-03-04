@@ -2,6 +2,7 @@ add_compile_options(${WELDER_C_CXX_EXTERNAL_FLAGS})
 
 # OS dependent static/source libraries.
 add_subdirectory(CEF)
+add_subdirectory(MbedTLS)
 add_subdirectory(Curl)
 add_subdirectory(GL)
 add_subdirectory(SDL)

@@ -1,9 +1,15 @@
-add_library(Curl STATIC IMPORTED GLOBAL)
+option(BUILD_TESTING
+       "Turn off test suite for libcurl."
+       OFF)
 
-set_target_properties(Curl
-  PROPERTIES
-    IMPORTED_LOCATION_DEBUG ${CMAKE_CURRENT_LIST_DIR}/Libraries/Windows_x86_Debug/libcurl.lib
-    IMPORTED_LOCATION_RELEASE ${CMAKE_CURRENT_LIST_DIR}/Libraries/Windows_x86_Release/libcurl.lib
-    INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/Includes/
-    INTERFACE_COMPILE_DEFINITIONS CURL_STATICLIB
-)
+option(BUILD_CURL_EXE
+       "Turn off the generation of an executable for curl."
+       OFF)
+       
+option(USE_MANUAL
+       "Turn off generating the manual for curl."
+       OFF)
+
+add_subdirectory(Repo)
+
+add_library(Curl STATIC IMPORTED GLOBAL)

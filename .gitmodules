@@ -31,3 +31,9 @@
 [submodule "Libraries/SpirvHeaders/Repo"]
 	path = External/SpirvHeaders/Repo
 	url = https://github.com/WelderFoundation/WelderEngineSpirvHeaders.git
+[submodule "External/Curl/Repo"]
+	path = External/Curl/Repo
+	url = https://github.com/curl/curl.git
+[submodule "External/MbedTLS/Repo"]
+	path = External/MbedTLS/Repo
+	url = https://github.com/ARMmbed/mbedtls.git
