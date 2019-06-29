@@ -1,0 +1,307 @@
+struct Ray
+{
+  var Start : Real3;
+  var Direction : Real3;
+  
+  constructor() {}
+  constructor(start : Real3, dir : Real3)
+  {
+    this.Start = start;
+    this.Direction = Math.Normalize(dir);
+  }
+  
+  function GetPoint(t : Real) : Real3
+  {
+    return this.Start + this.Direction * t;
+  }
+}
+
+struct Sphere
+{
+  var Center : Real3;
+  var Radius : Real;
+  
+  constructor() {}
+  constructor(center : Real3, radius : Real)
+  {
+    this.Center = center;
+    this.Radius = radius;
+  }
+}
+
+struct Aabb
+{
+  var Min : Real3;
+  var Max : Real3;
+  
+  constructor() {}
+  constructor(min : Real3, max : Real3)
+  {
+    this.Min = min;
+    this.Max = max;
+  }
+  
+  function GetCenter() : Real3
+  {
+    return (this.Max + this.Min) / 2.0;
+  }
+  
+  function GetNormal(worldPoint : Real3) : Real3
+  {
+    var index = 0;
+    var offset = worldPoint - this.GetCenter();
+    var absOffset = Math.Abs(offset);
+    
+    index = ShaderIntrinsics.Select(absOffset[index] > absOffset[1], index, 1);
+    index = ShaderIntrinsics.Select(absOffset[index] > absOffset[2], index, 2);
+      
+    var normal = Real3();
+    normal[index] = Math.Sign(offset[index]);
+    return normal;
+  }
+}
+
+struct RayTraceResult
+{
+  var T : Real;
+  var Normal : Real3;
+  var Position : Real3;
+  
+  constructor()
+  {
+    this.T = -1.0;
+    this.Normal = Real3(1, 0, 0);
+  }
+  
+  function GetIntersectionPoint() : Real3
+  {
+    return this.Position + this.Normal * 0.001;
+  }
+}
+
+struct Geometry
+{
+  [Static]
+  function RaySphereCpu(ray : Ray, sphere : Sphere) : RayTraceResult
+  {
+    var centerToRayStart = ray.Start - sphere.Center;
+    var a = Math.LengthSq(ray.Direction);
+    var b = 2 * Math.Dot(ray.Direction, centerToRayStart);
+    var c = Math.LengthSq(centerToRayStart) - sphere.Radius * sphere.Radius;
+    
+    if(c > 0 && b > 0)
+      return RayTraceResult();
+      
+    var discriminant = b * b - 4 * a * c;
+    if(discriminant < 0)
+      return RayTraceResult();
+      
+    var t = (-b - Math.Sqrt(discriminant)) / (2 * a);
+    if(t < 0)
+      return RayTraceResult();
+      
+    var result = RayTraceResult();
+    result.T = t;
+    result.Position = ray.GetPoint(t);
+    result.Normal = Math.Normalize(result.Position - sphere.Center);
+    return result;
+  }
+  
+  [Static]
+  function RaySphereGpu(ray : Ray, sphere : Sphere) : RayTraceResult
+  {
+    var centerToRayStart = ray.Start - sphere.Center;
+    var a = Math.LengthSq(ray.Direction);
+    var b = 2 * Math.Dot(ray.Direction, centerToRayStart);
+    var c = Math.LengthSq(centerToRayStart) - sphere.Radius * sphere.Radius;
+    
+    //Math.Step(0, c) * Math.Step(0, b);
+    var isOutsideAndPointingAway = ShaderIntrinsics.LogicalAnd(c > 0, b > 0);
+    if(isOutsideAndPointingAway)
+      return RayTraceResult();
+    var scalar1 = ShaderIntrinsics.Select(isOutsideAndPointingAway, 0.0, 1.0);
+    //if(c > 0 && b > 0)
+    //  //return RayTraceResult();
+    //  scalar = 0;
+      
+    var discriminant = b * b - 4 * a * c;
+    //scalar *= Math.Step(discriminant, 0);
+    var scalar2 = ShaderIntrinsics.Select(discriminant < 0, 0.0, 1.0);
+    if(discriminant < 0)
+    //  scalar = 0;
+      return RayTraceResult();
+      
+    var t = (-b - Math.Sqrt(discriminant)) / (2 * a);
+    //scalar = Math.Step(t, 0);
+    //if(t < 0)
+    //  scalar = 0;
+    var scalar3 = ShaderIntrinsics.Select(t < 0, 0.0, 1.0);
+    scalar3 = ShaderIntrinsics.Select(discriminant < 0, 0.0, 1.0);
+    //  return RayTraceResult();
+      
+    var result = RayTraceResult();
+    result.T = Math.Lerp(-1, t, scalar1 * scalar2 * scalar3);
+    result.Position = ray.GetPoint(t);
+    result.Normal = Math.Normalize(result.Position - sphere.Center);
+    return result;
+  }
+  
+  [Static]
+  function RaySphereGpu2(ray : Ray, sphere : Sphere) : RayTraceResult
+  {
+    //solve for tc
+    var l = sphere.Center - ray.Start;
+    var tc = Math.Dot(l, ray.Direction);
+    
+    if ( tc < 0.0 ) return RayTraceResult();
+    var d2 = (tc*tc) - Math.LengthSq(l);
+    
+    var radius2 = sphere.Radius * sphere.Radius;
+    if ( d2 > radius2) return RayTraceResult();
+
+    //solve for t1c
+    var t1c = Math.Sqrt( radius2 - d2 );
+
+    //solve for intersection points
+    var t1 = tc - t1c;
+    var t2 = tc + t1c;
+    var t = Math.Min(t1, t2);
+    if(t < 0)
+      return RayTraceResult();
+    
+    var result = RayTraceResult();
+    result.T = t;
+    result.Position = ray.GetPoint(result.T);
+    result.Normal = Math.Normalize(result.Position - sphere.Center);
+    return result;
+  }
+  
+  [Static]
+  function RaySphere(ray : Ray, sphere : Sphere) : RayTraceResult
+  {
+    return Geometry.RaySphereCpu(ray, sphere);
+    //return Geometry.RaySphereGpu(ray, sphere);
+    //return Geometry.RaySphereGpu2(ray, sphere);
+  }
+  
+  [Static]
+  function RayAabbCpu(ray : Ray, aabb : Aabb) : RayTraceResult
+  {
+    var tMin = 0.0;
+    var tMax = Real.PositiveMax;
+    var nMin = Real3();
+    var nMax = Real3();
+    var minNormals = FixedArray[Real3, 3]()
+    {Real3(-1, 0, 0), Real3(0, -1, 0), Real3(0, 0, -1)};
+    var maxNormals = FixedArray[Real3, 3]()
+    {Real3(1, 0, 0), Real3(0, 1, 0), Real3(0, 0, 1)};
+
+    for(var i = 0; i < 3; ++i)
+    {
+      if(Math.Abs(ray.Direction[i]) < 0.0001)
+      {
+        if(aabb.Min[i] > ray.Start[i] || ray.Start[i] > aabb.Max[i])
+          return RayTraceResult();
+      }
+      else
+      {
+        var invD = 1.0 / ray.Direction[i];
+        var t0 = (aabb.Min[i] - ray.Start[i]) * invD;
+        var t1 = (aabb.Max[i] - ray.Start[i]) * invD;
+        var minNormal = minNormals[i];
+        var maxNormal = maxNormals[i];
+
+        if(t0 > t1)
+        {
+          var temp = t0;
+          t0 = t1;
+          t1 = temp;
+          
+          var temp1 = minNormal;
+          minNormal = maxNormal;
+          maxNormal = minNormal;
+        }
+
+        if(t0 > tMin)
+        {
+          tMin = t0;
+          nMin = minNormal;
+        }
+        if(t1 < tMax)
+        {
+          tMax = t1;
+          nMax = maxNormal;
+        }
+        //tMin = Math.Max(t0, tMin);
+        //tMax = Math.Min(t1, tMax);
+        if(tMin > tMax)
+          return RayTraceResult();
+      }
+    }
+
+    var result = RayTraceResult();
+    result.T = tMin;
+    result.Position = ray.GetPoint(result.T);
+    result.Normal = nMin;//Real3(1, 0, 0);
+    return result;
+  }
+  
+  [Static]
+  function RayAabbGpu(ray : Ray, aabb : Aabb) : RayTraceResult
+  {
+    var tMin = 0.0;
+    var tMax = Real.PositiveMax;
+
+    for(var i = 0; i < 3; ++i)
+    {
+      var invD = 1.0 / ray.Direction[i];
+      var t0 = (aabb.Min[i] - ray.Start[i]) * invD;
+      var t1 = (aabb.Max[i] - ray.Start[i]) * invD;
+    
+      var tMinAxis = Math.Min(t0, t1);
+      var tMaxAxis = Math.Max(t0, t1);
+      
+      tMin = Math.Max(tMinAxis, tMin);
+      tMax = Math.Min(tMaxAxis, tMax);
+      if(tMin > tMax)
+        return RayTraceResult();
+    }
+
+    var result = RayTraceResult();
+    result.T = ShaderIntrinsics.Select(tMin > tMax, -1, tMin);
+    result.Position = ray.GetPoint(result.T);
+    result.Normal = aabb.GetNormal(result.Position);
+    return result;
+  }
+  
+  [Static]
+  function RayAabbGpuFast(ray : Ray, aabb : Aabb) : RayTraceResult
+  {
+    var tMin = 0.0;
+    var tMax = Real.PositiveMax;
+
+    var invD = Real3(1.0) / ray.Direction;
+    var t0 = (aabb.Min - ray.Start) * invD;
+    var t1 = (aabb.Max - ray.Start) * invD;
+    
+    var tMinAxis = Math.Min(t0, t1);
+    var tMaxAxis = Math.Max(t0, t1);
+    
+    tMin = Math.Max(tMinAxis[0], Math.Max(tMinAxis[1], tMinAxis[2]));
+    tMax = Math.Min(tMaxAxis[0], Math.Min(tMaxAxis[1], tMaxAxis[2]));
+    
+
+    var result = RayTraceResult();
+    result.T = ShaderIntrinsics.Select(tMin > tMax, -1, tMin);
+    result.Position = ray.GetPoint(result.T);
+    result.Normal = aabb.GetNormal(result.Position);
+    return result;
+  }
+  
+  [Static]
+  function RayAabb(ray : Ray, aabb : Aabb) : RayTraceResult
+  {
+    //return Geometry.RayAabbCpu(ray, aabb);
+    return Geometry.RayAabbGpuFast(ray, aabb);
+  }
+}

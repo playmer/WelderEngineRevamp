@@ -1,0 +1,58 @@
+struct WireFrameGeoInput
+{
+  [Input] var ViewPosition : Real3;
+  [Input] var PerspectivePosition : Real4;
+}
+
+struct WireFrameGeoOutput
+{
+  //[NoPerspective]
+  [Output] var Distance : Real3;
+  [Output] var EdgeDistances : Real3;
+  [Output] var TriDistance : Real3;
+}
+
+[Geometry(maxVertices : 3)]
+struct WireFrameGeometry
+{
+  [AppBuiltInInput] var ViewportSize : Real2;
+  [PropertyInput] 
+  var Active : Boolean = true;
+  
+  function Main(input : TriangleInput[WireFrameGeoInput], output : TriangleOutput[WireFrameGeoOutput])
+  {
+    if(!this.Active)
+      return;
+    
+    var mew = 0.0;
+    var p0 = this.ViewportSize * input[0].PerspectivePosition.XY / input[0].PerspectivePosition.W;
+    var p1 = this.ViewportSize * input[1].PerspectivePosition.XY / input[1].PerspectivePosition.W;
+    var p2 = this.ViewportSize * input[2].PerspectivePosition.XY / input[2].PerspectivePosition.W;
+    
+    var v0 = p2 - p1;
+    var v1 = p2 - p0;
+    var v2 = p1 - p0;
+    var l0 = Math.Length(v0);
+    var l1 = Math.Length(v1);
+    var l2 = Math.Length(v2);
+    var vl0 = Math.Length(input[2].ViewPosition - input[1].ViewPosition);
+    var vl1 = Math.Length(input[2].ViewPosition - input[0].ViewPosition);
+    var vl2 = Math.Length(input[1].ViewPosition - input[0].ViewPosition);
+    var area = Math.Abs(v1.X * v2.Y - v1.Y * v2.X);
+    
+    var outV = WireFrameGeoOutput();
+    outV.Distance = Real3(area / l0, mew, mew);
+    outV.EdgeDistances = Real3(0, vl2, vl1);
+    outV.TriDistance = Real3(1, 0, 0);
+    output.Append(outV, 0);
+    outV.Distance = Real3(mew, area / l1, mew);
+    outV.EdgeDistances = Real3(vl2, 0, vl0);
+    outV.TriDistance = Real3(0, 1, 0);
+    output.Append(outV, 1);
+    outV.Distance = Real3(mew, mew, area / l2);
+    outV.EdgeDistances = Real3(vl1, vl0, 0);
+    outV.TriDistance = Real3(0, 0, 1);
+    output.Append(outV, 2);
+    output.Restart();
+  }
+}

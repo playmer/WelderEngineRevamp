@@ -1,0 +1,40 @@
+[Vertex]
+struct BasicVertex
+{
+  [AppBuiltInInput] var LocalToWorld : Real4x4;
+  [AppBuiltInInput] var WorldToView : Real4x4;
+  [AppBuiltInInput] var ViewToPerspective : Real4x4;
+  
+  [Input] var LocalPosition : Real3;
+  [Input] var LocalNormal : Real3;
+  
+  [Output] var ViewPosition : Real3;
+  [Output] var ViewNormal : Real3;
+  [Output] var PerspectivePosition : Real4;
+  [HardwareBuiltInOutput] var ApiPerspectivePosition : Real4;
+
+  function Main()
+  {
+    var localToView = Math.Multiply(this.WorldToView, this.LocalToWorld);
+
+    this.ViewPosition = Math.MultiplyPoint(localToView, this.LocalPosition);
+    this.ViewNormal = Math.MultiplyNormal(localToView, this.LocalNormal);
+
+    var localToPerspective = Math.Multiply(this.ViewToPerspective, localToView);
+    this.PerspectivePosition = Math.Multiply(localToPerspective, Real4(this.LocalPosition, 1));
+    this.ApiPerspectivePosition = this.PerspectivePosition;
+  }
+}
+
+[Pixel]
+struct BasicPixel
+{
+  [Input] var ViewNormal : Real3;
+  [Output] var Target0 : Real4;
+
+  function Main()
+  {
+    var color = Math.Dot(this.ViewNormal, Real3.ZAxis);
+    this.Target0 = Real4(color, color, color, 1);
+  }
+}

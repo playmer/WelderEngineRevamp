@@ -1,0 +1,78 @@
+// Shader input attribute definitions
+// [BuiltInInput]  Input comes from predefined data given by the graphics engine
+// [StageInput]    Input comes from the previous hardware stage (mesh -> vertex -> geometry -> pixel)
+// [FragmentInput] Input comes from a previous fragment in the same stage
+// [PropertyInput] Input comes from this fragment
+// [Input]         Input auto resolves from any of the previous in the order
+//                 [FragmentInput][StageInput][BuiltInInput][PropertyInput]
+//
+// Pixel fragment Example:
+// [FragmentInput][StageInput] var ViewNormal : Real3;
+// Input will come from a previous pixel fragment that outputs ViewNormal
+// otherwise, input will come from the vertex shader
+
+[Pixel]
+struct WireFramePixel
+{
+  [PropertyInput] var Filled : Boolean = true;
+  [PropertyInput] var Pixels : Integer = 10;
+  
+  //[NoPerspective]
+  [StageInput] var Distance : Real3;
+  //[StageInput] var EdgeDistances : Real3;
+  [StageInput] var TriDistance : Real3;
+  
+  [FragmentInput][Output] var Albedo : Real3;
+  [FragmentInput][Output] var Metallic : Real;
+  [FragmentInput][Output] var Roughness : Real;
+  [FragmentInput][Output] var Specular : Real;
+  
+  function GetIndex() : Integer
+  {
+    //if(this.Distance.X < this.Distance.Y && this.Distance.X < this.Distance.Z)
+    //  return 0;
+    //else if(this.Distance.Y < this.Distance.X && this.Distance.Y < this.Distance.Z)
+    //  return 1;
+    //return 2;
+    if(this.TriDistance.X < this.TriDistance.Y && this.TriDistance.X < this.TriDistance.Z)
+      return 0;
+    else if(this.TriDistance.Y < this.TriDistance.X && this.TriDistance.Y < this.TriDistance.Z)
+      return 1;
+    return 2;
+  }
+  
+  function Main()
+  {
+    var index = this.GetIndex();
+    var distance = this.Distance[index];
+    
+    
+    if(!this.Filled && distance > this.Pixels)
+      ShaderIntrinsics.Kill();
+    if(!this.Filled)
+      distance = 0;
+    var t = 0.0;
+    //if(distance < this.Pixels)
+    //{
+    //  var edgeDistance = this.EdgeDistances[(index + 2) % 3];
+    //  //t = Math.Sin(20 * edgeDistance);
+    //  t = Math.Sin(20 * edgeDistance) + 1;
+    //  
+    //  //t = Math.Clamp(t, 0, 1);
+    //  t = Math.Abs(t);
+    //  if(t > 0.5)
+    //    t = 1;
+    //  else
+    //    t = 0;
+    //}
+    //else
+      t = Math.SmoothStep(0, this.Pixels, distance);
+    
+    
+    
+    this.Albedo = Math.Lerp(Real3(), this.Albedo, t);
+    this.Metallic = Math.Lerp(0, this.Metallic, t);
+    this.Roughness = Math.Lerp(0, this.Roughness, t);
+    this.Specular = Math.Lerp(0, this.Specular, t);
+  }
+}

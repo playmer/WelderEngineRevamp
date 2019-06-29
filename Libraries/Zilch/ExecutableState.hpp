@@ -815,23 +815,7 @@ public:
   static T Get(Call& call, size_t index);
   static void Set(Call& call, size_t index, const T& value);
   static byte* GetArgumentPointer(Call& call, size_t index);
-  static T GetNonNull(Call& call, size_t index)
-  {
-    T result = Get(call, index);
-    // If the result is null then report an error
-    if (result == nullptr)
-    {
-      ExecutableState* executableState = ExecutableState::GetCallingState();
-      // Lookup the function type to get the argument name
-      DelegateType* functionType = call.GetFunction()->FunctionType;
-      if (index < functionType->Parameters.Size())
-        executableState->ThrowException(
-            String::Format("Error: Parameter '%s' cannot be null.", functionType->Parameters[index].Name.c_str()));
-      else
-        executableState->ThrowException(String::Format("Error: Argument %d cannot be null.", index));
-    }
-    return result;
-  }
+  static T GetNonNull(Call& call, size_t index);
 
   static T CastArgumentPointer(byte* stackPointer)
   {
@@ -1197,6 +1181,25 @@ byte* CallHelper<T>::GetArgumentPointer(Call& call, size_t index)
   {
     return call.GetValuePointer<T>(index);
   }
+}
+
+template <typename T>
+T CallHelper<T>::GetNonNull(Call& call, size_t index)
+{
+  T result = Get(call, index);
+  // If the result is null then report an error
+  if (result == nullptr)
+  {
+    ExecutableState* executableState = ExecutableState::GetCallingState();
+    // Lookup the function type to get the argument name
+    DelegateType* functionType = call.GetFunction()->FunctionType;
+    if (index < functionType->Parameters.Size())
+      executableState->ThrowException(
+          String::Format("Error: Parameter '%s' cannot be null.", functionType->Parameters[index].Name.c_str()));
+    else
+      executableState->ThrowException(String::Format("Error: Argument %d cannot be null.", index));
+  }
+  return result;
 }
 
 // A helper for allocating a type within Zilch using the current executable

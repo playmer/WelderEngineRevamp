@@ -162,4 +162,5 @@ add_subdirectory(Libraries/Platform/${WELDER_PLATFORM})
 
 add_subdirectory(External)
 add_subdirectory(Libraries)
-add_subdirectory(JoshDavisClass)
+#add_subdirectory(JoshDavisClass)
+add_subdirectory(ShaderCompiler)

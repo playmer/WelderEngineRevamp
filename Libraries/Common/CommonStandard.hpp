@@ -34,7 +34,7 @@
 #include <cfloat>
 #include <malloc.h>
 
-using namespace std;
+//using namespace std;
 
 namespace Zero
 {

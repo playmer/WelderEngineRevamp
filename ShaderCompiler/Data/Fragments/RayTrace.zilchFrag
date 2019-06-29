@@ -1,0 +1,25 @@
+[Vertex]
+struct RayTraceVertex
+{
+  [Input][Output]
+  var Uv : Real2;
+  
+  function Main()
+  {
+  }
+}
+
+[Pixel]
+struct RayTracePixel
+{
+  [StageInput] var Uv : Real2;
+  [StageOutput] var Target0 : Real4;
+  
+  var SceneImage : SampledImage2d;
+
+  function Main()
+  {
+    var color = this.SceneImage.Sample(this.Uv);
+    this.Target0 = color;
+  }
+}

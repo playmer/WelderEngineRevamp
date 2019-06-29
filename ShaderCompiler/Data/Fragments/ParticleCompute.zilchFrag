@@ -1,0 +1,56 @@
+
+struct ParticleData
+{
+  var Position : Real4;
+  var Velocity : Real4;
+}
+
+[UnitTest][Compute(localSizeZ : 1, localSizeX : 1)]
+struct ParticleCompute
+{
+  [HardwareBuiltInInput] var GlobalInvocationId : Integer3;
+  var Dt : Real = 0.016;
+  var G : Real4 = Real4(0, -10, 0, 0);
+  var GravityConstant : Real = 0.1;
+  
+  var Array : RuntimeArray[ParticleData];
+  
+  [EntryPoint]
+  function Main()
+  {
+    var i = this.GlobalInvocationId.X;
+    var force = Real4();
+    //force += this.G * this.Dt;
+    var vel = this.Array[i].Velocity;
+    var pos = this.Array[i].Position;
+    
+    force += this.ComputeNBodyForces(&this.Array, i);
+    
+    vel += force * this.Dt;
+    pos += vel * this.Dt;
+    
+    
+    
+    this.Array[i].Velocity = vel;
+    this.Array[i].Position = pos;
+  }
+  
+  function ComputeNBodyForces(array : ref RuntimeArray[ParticleData], i : Integer) : Real4
+  {
+    var force = Real4();
+    for(var j = 0; j < array.Count; ++j)
+    {
+      if(i != j)
+        force += this.ComputeForce(array[i], array[j]);
+    }
+    return force;
+  }
+  
+  function ComputeForce(p0 : ParticleData, p1 : ParticleData) : Real4
+  {
+    var diff = p1.Position - p0.Position;
+    var dist = Math.Length(diff);
+    var scalar = this.GravityConstant / (dist * dist * dist + 0.1);
+    return scalar * diff;
+  }
+}

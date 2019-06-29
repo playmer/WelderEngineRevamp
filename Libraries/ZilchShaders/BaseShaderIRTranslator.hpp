@@ -3,6 +3,8 @@
 
 namespace Zero
 {
+class ZilchShaderIRProject;
+class ZilchShaderIRLibrary;
 
 /// An interface for a front-end shader translator (typically targetting some
 /// kind of IR). This allows language agnostic front-end translation. As

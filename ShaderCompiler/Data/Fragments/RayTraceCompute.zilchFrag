@@ -1,0 +1,336 @@
+struct LightData
+{
+  var Position : Real3;
+  var Color : Real4;
+}
+
+struct SphereData
+{
+  var Sphere : Sphere = Sphere();
+  var MaterialId : Integer;
+}
+
+struct AabbData
+{
+  var Aabb : Aabb = Aabb();
+  var MaterialId : Integer;
+}
+
+struct Material
+{
+  var Color : Real4;
+  var SpecularCoefficient : Real;
+  var SpecularExponent : Real;
+  var AmbientCoefficient : Real;
+  var LambertianCoefficent : Real;
+  var Metalness : Real;
+  var Attenuation : Real;
+}
+
+struct LocalIllumination
+{
+  [Static]
+  function ComputeDiffuse(castData : RayTraceResult, lightData : LightData) : Real4
+  {
+    var n = Math.Normalize(castData.Normal);
+    var l = Math.Normalize(lightData.Position - castData.Position);
+    var diffuse = Math.Max(Math.Dot(n, l), 0);
+    return lightData.Color * diffuse;
+  }
+  
+  [Static]
+  function ComputeSpecular(castData : RayTraceResult, lightData : LightData, ray : Ray) : Real4
+  {
+    var n = Math.Normalize(castData.Normal);
+    var v = -Math.Normalize(ray.Direction);
+    var r = Math.ReflectAcrossVector(v, castData.Normal);
+    
+    var l = Math.Normalize(lightData.Position - castData.Position);
+    
+    var specularCoef = Math.Max(Math.Dot(r, l), 0);
+    var specExp = 10.5;
+    var scalar = Math.Pow(specularCoef, specExp);
+    
+    return scalar * lightData.Color;
+  }
+}
+
+struct StackData
+{
+  var Color : Real4;
+  var Attenuation : Real;
+}
+
+struct ShadowResult
+{
+  var Ray : Ray = Ray();
+  var Scalar : Real = 1.0;
+}
+
+[UnitTest][Compute(localSizeZ : 1, localSizeX : 32, localSizeY : 32)]
+struct RayTraceCompute
+{
+  [Input] var Time : Real;
+  [Input] var Size : Integer2 = Integer2(512, 512);
+  [Input] var ClearColor : Real4 = Real4(1);
+  
+  [Input] var PerspectiveToView : Real4x4;
+  [Input] var ViewToWorld : Real4x4;
+  [Input] var GlobalInvocationId : Integer3;
+  
+  [Input] var Spheres : RuntimeArray[Sphere];
+  [Input] var Aabbs : RuntimeArray[AabbData];
+  [Input] var Lights : RuntimeArray[LightData];
+  [Input] var Materials : RuntimeArray[Material];
+  [Input] var AmbientColor : Real4 = Real4(0.1);
+  [Output] var Image : StorageImage2d;
+  
+  
+  function GetRay() : Ray
+  {
+    var perspectiveToWorld = Math.Multiply(this.ViewToWorld, this.PerspectiveToView);
+    var xBasis = Math.Multiply(perspectiveToWorld, Real4(1, 0, 0, 0));
+    var yBasis = Math.Multiply(perspectiveToWorld, Real4(0, 1, 0, 0));
+    var zBasis = Math.Multiply(perspectiveToWorld, Real4(0, 0, 1, 0));
+    var oBasis = Math.Multiply(perspectiveToWorld, Real4(0, 0, 0, 1));
+    var x = this.GlobalInvocationId.X;
+    var y = this.Size.Y - this.GlobalInvocationId.Y;
+    var size = this.Size;
+    
+    var sX = (2 / size.X as Real) * (x + 0.5) - 1;
+    var sY = (2 / size.Y as Real) * (y + 0.5) - 1;
+    var a = sX * xBasis + sY * yBasis + oBasis;
+    a /= a.W;
+    var b = sX * xBasis + sY * yBasis + zBasis + oBasis;
+    b /= b.W;
+    
+    var ray = Ray(a.XYZ, b.XYZ - a.XYZ);
+    return ray;
+  }
+  
+  function CastRay(ray : Ray) : RayTraceResult
+  {
+    var bestResult = RayTraceResult();
+    bestResult.T = Real.PositiveMax;
+    var hit = false;
+    
+    for(var i = 0; i < this.Spheres.Count; ++i)
+    {
+      var sphere = this.Spheres[i];
+      var result = Geometry.RaySphere(ray, sphere);
+      
+      var isValid = ShaderIntrinsics.LogicalAnd(0 <= result.T, result.T < bestResult.T);
+      if(isValid)
+      {
+        bestResult = result;
+        hit = true;
+      }
+    }
+    for(var i = 0; i < this.Aabbs.Count; ++i)
+    {
+      var aabb = this.Aabbs[i].Aabb;
+      var result = Geometry.RayAabb(ray, aabb);
+      
+      var isValid = ShaderIntrinsics.LogicalAnd(0 <= result.T, result.T < bestResult.T);
+      if(isValid)
+      {
+        bestResult = result;
+        hit = true;
+      }
+    }
+    if(!hit)
+      return RayTraceResult();
+    return bestResult;
+  }
+  
+  function ShadowTest(ray : Ray, castData : RayTraceResult, lightData : LightData) : ShadowResult
+  {
+    var shadowRay = Ray();
+    shadowRay.Start = castData.GetIntersectionPoint();
+    var toLightDir = lightData.Position - shadowRay.Start;
+    shadowRay.Direction = Math.Normalize(toLightDir);
+      
+    var shadowResult = this.CastRay(shadowRay);
+    
+    var result = ShadowResult();
+    result.Scalar = 1.0;
+    result.Ray = shadowRay;
+    
+    var isValid = ShaderIntrinsics.LogicalAnd(0 <= shadowResult.T, shadowResult.T < Math.Length(toLightDir));
+    if(isValid)
+      result.Scalar = 0;
+      
+    return result;
+  }
+  
+  function ComputeColor(result : RayTraceResult, ray : Ray) : Real4
+  {
+    if(result.T < 0)
+      return this.ClearColor;
+    
+    var ambient = Real4(0.1);
+    var color = Real4();
+    color += ambient;
+    
+    for(var i = 0; i < this.Lights.Count; ++i)
+    {
+      var lightContribution = Real4();
+      lightContribution += LocalIllumination.ComputeDiffuse(result, this.Lights[i]);
+      lightContribution += LocalIllumination.ComputeSpecular(result, this.Lights[i], ray);
+      
+      var shadowResult = this.ShadowTest(ray, result, this.Lights[i]);
+      lightContribution *= shadowResult.Scalar;
+      
+      color += lightContribution;
+    }
+    //result.Normal = result.Normal * 0.5 + Real3(0.5);
+    //var color = Real4(result.Normal, 1);
+    
+    //var count = this.Lights.Count;
+    //color = Real4(count as Real);
+    
+    return color;
+  }
+  
+  function ComputeColor(result : RayTraceResult, ray : Ray, material : Material) : StackData
+  {
+    if(result.T < 0)
+      return StackData() {Color = this.ClearColor};
+      
+    var color = material.Color * this.AmbientColor * material.AmbientCoefficient;
+    for(var i = 0; i < this.Lights.Count; ++i)
+    {
+      var lightData = this.Lights[i];
+      var lightColor = lightData.Color;
+      var n = Math.Normalize(result.Normal);
+      var l = Math.Normalize(lightData.Position - result.Position);
+      var v = -Math.Normalize(ray.Direction);
+      var r = Math.ReflectAcrossVector(v, result.Normal);
+      
+      var shadowResult = this.ShadowTest(ray, result, this.Lights[i]);
+    
+      var lightContribution = Real4();
+      
+      var diffuseCoef = Math.Max(Math.Dot(result.Normal, l), 0);
+      var diffuse = material.LambertianCoefficent * lightColor * material.Color * diffuseCoef;
+      lightContribution += diffuse;
+      
+      var specularCoef = Math.Max(Math.Dot(r, l), 0);
+      var specularHighlight = Math.Lerp(Real4(1), material.Color, material.Metalness);
+      var specular = material.SpecularCoefficient * specularHighlight * lightColor * Math.Pow(specularCoef, material.SpecularExponent);
+      lightContribution += specular * shadowResult.Scalar;
+      //lightContribution += LocalIllumination.ComputeDiffuse(result, this.Lights[i]);
+      
+      lightContribution *= shadowResult.Scalar;
+      
+      color += material.Attenuation * lightContribution;
+    }
+    
+    var resultData = StackData();
+    resultData.Color = color;
+    resultData.Attenuation = material.SpecularCoefficient;
+    return resultData;
+    //return color;
+  }
+  
+  function Recurse3(ray : Ray) : Real4
+  {
+    //if(depth > 2)
+    //  return Real4();
+      
+    var result = this.CastRay(ray);
+    var color = this.ComputeColor(result, ray);
+    return color * 0.5;
+    
+    //var reflectionRay = Ray();
+    //reflectionRay.Start = result.Position + result.Normal * 0.001;
+    //reflectionRay.Direction = Math.ReflectAcrossVector(-ray.Direction, result.Normal);
+    //this.Recurse(reflectionRay, 5);
+    
+    //return color;
+  }
+  
+  function Recurse2(ray : Ray) : Real4
+  {
+    //if(depth > 2)
+    //  return Real4();
+      
+    var result = this.CastRay(ray);
+    var color = this.ComputeColor(result, ray);
+    //return color * 0.5;
+    
+    var reflectionRay = Ray();
+    reflectionRay.Start = result.Position + result.Normal * 0.001;
+    reflectionRay.Direction = Math.ReflectAcrossVector(-ray.Direction, result.Normal);
+    //color += this.Recurse3(reflectionRay);
+    color *= 0.5;
+    return color;
+    
+    //return color;
+  }
+  
+  var Stack : FixedArray[StackData, 10] = FixedArray[StackData, 10]();
+  var StackIndex = 0;
+  
+  function Recurse(ray : Ray, depth : Integer) : Real4
+  {
+    if(depth > 2)
+      return Real4();
+      
+    var result = this.CastRay(ray);
+    var color = this.ComputeColor(result, ray);
+    
+    var reflectionRay = Ray();
+    reflectionRay.Start = result.Position + result.Normal * 0.001;
+    reflectionRay.Direction = Math.ReflectAcrossVector(-ray.Direction, result.Normal);
+    color += this.Recurse2(reflectionRay);
+    
+    return color;
+  }
+  
+  function IterativeRecurse(ray : Ray, maxDepth : Integer) : Real4
+  {
+    for(var i = 0; i < maxDepth; ++i)
+    {
+      var result = this.CastRay(ray);
+      
+      var material = this.Materials[0];
+      var stackData = this.ComputeColor(result, ray, material);
+      this.Stack[this.StackIndex] = stackData;
+      ++this.StackIndex;
+      
+      if(result.T < 0)
+        break;
+      
+      var reflectionRay = Ray();
+      reflectionRay.Start = result.Position + result.Normal * 0.001;
+      reflectionRay.Direction = Math.ReflectAcrossVector(-ray.Direction, result.Normal);
+      ray = reflectionRay;
+    }
+    
+    var totalColor = Real4();
+    while(this.StackIndex != 0)
+    {
+      var i = this.StackIndex - 1;
+      var item = this.Stack[i];
+      var scalar = item.Attenuation;
+      --this.StackIndex;
+      
+      totalColor = item.Color + scalar * totalColor;
+    }
+    return totalColor;
+  }
+  
+  function Main()
+  {
+    var coordinate = this.GlobalInvocationId.XY;
+    
+    var ray = this.GetRay();
+    //var color = this.Recurse(ray, 0);
+    var color = this.IterativeRecurse(ray, 5);
+    
+    //ShaderIntrinsics.ImageWrite(this.Image, coordinate, color);
+    this.Image.Write(coordinate, color);
+  }
+}
+

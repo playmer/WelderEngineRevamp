@@ -1,0 +1,15 @@
+// Does all lighting calculations at the time of rendering scene geometry.
+// Allows one directional light to be used.
+[Pixel][RenderPass]
+struct DebugPixel
+{
+  [StageInput] var ViewNormal : Real3;
+  [StageInput] var PerspectivePosition : Real4;
+  [Output] var Target0 : Real4;
+
+  function Main()
+  {
+    this.Target0 = Real4(this.ViewNormal, 1);
+    //this.Target0 = this.PerspectivePosition;
+  }
+}

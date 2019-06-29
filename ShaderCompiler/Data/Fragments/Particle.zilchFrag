@@ -1,0 +1,35 @@
+[UnitTest][Vertex]
+struct ParticleVertex
+{
+  [Input] var VertexId : Integer;
+  [Input] var WorldToView : Real4x4;
+  [Input] var ViewToPerspective : Real4x4;
+  [Output] var ViewPosition : Real3;
+  [Input][Output] var Uv : Real2;
+  [HardwareBuiltInOutput] var ApiPerspectivePosition : Real4;
+  
+  var Array : RuntimeArray[ParticleData];
+  
+  
+  function Main()
+  {
+    var localPosition = this.Array[this.VertexId].Position;
+    var viewPosition = Math.Multiply(this.WorldToView, localPosition);
+    this.ApiPerspectivePosition = Math.Multiply(this.ViewToPerspective, viewPosition);
+    this.ViewPosition = viewPosition.XYZ;
+  }
+}
+
+[UnitTest][Pixel]
+struct ParticlePixel
+{
+  [PropertyInput] var Texture : SampledImage2d;
+  [StageInput] var Uv : Real2;
+  [StageOutput] var Target0 : Real4;
+  function Main()
+  {
+    this.Target0 = this.Texture.Sample(this.Uv);
+    //this.Target0 = Real4(this.Uv, 0, 1);
+    //this.Target0 = Colors.Red;
+  }
+}

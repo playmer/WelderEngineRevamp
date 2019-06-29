@@ -6,6 +6,26 @@ namespace Zilch
 
 using namespace Zero;
 
+// A simple helper to resolve a function (assumed to be value types) into
+// calling a basic op function.
+template <OpType opType>
+static inline void ResolveSimpleFunction(ZilchSpirVFrontEnd* translator,
+                                         Zilch::FunctionCallNode* functionCallNode,
+                                         Zilch::MemberAccessNode* memberAccessNode,
+                                         ZilchSpirVFrontEndContext* context)
+{
+  ZilchShaderIRType* resultType = translator->FindType(functionCallNode->ResultType, functionCallNode);
+
+  ZilchShaderIROp* result = translator->BuildIROpNoBlockAdd(opType, resultType, context);
+  for (size_t i = 0; i < functionCallNode->Arguments.Size(); ++i)
+  {
+    ZilchShaderIROp* arg = translator->WalkAndGetValueTypeResult(functionCallNode->Arguments[i], context);
+    result->mArguments.PushBack(arg);
+  }
+  context->GetCurrentBlock()->AddOp(result);
+  context->PushIRStack(result);
+}
+
 ZilchDefineType(Sampler, builder, type)
 {
   type->AddAttribute(SpirVNameSettings::mNonCopyableAttributeName);

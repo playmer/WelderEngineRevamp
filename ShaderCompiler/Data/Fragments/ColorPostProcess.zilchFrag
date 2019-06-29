@@ -1,0 +1,13 @@
+// Color input for generic use. Color is not used in lighting, see Albedo.
+// Output values are constant over the surface.
+[Pixel]
+struct ColorPostProcess
+{
+  [StageInput] var Uv : Real2;
+  [StageOutput] var Target0 : Real4;
+
+  function Main()
+  {
+    this.Target0 = Real4(this.Uv, 0, 1);
+  }
+}

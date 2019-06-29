@@ -3,6 +3,8 @@
 
 namespace Zero
 {
+class ZilchSpirVFrontEnd;
+class ZilchSpirVFrontEndContext;
 
 // Registered zilch function that doesn't have an actual implementation. No
 // function that uses this should be invoked.
@@ -36,26 +38,6 @@ struct TypeGroups
     return mRealMatrixTypes[x + y * 3];
   }
 };
-
-// A simple helper to resolve a function (assumed to be value types) into
-// calling a basic op function.
-template <OpType opType>
-inline void ResolveSimpleFunction(ZilchSpirVFrontEnd* translator,
-                                  Zilch::FunctionCallNode* functionCallNode,
-                                  Zilch::MemberAccessNode* memberAccessNode,
-                                  ZilchSpirVFrontEndContext* context)
-{
-  ZilchShaderIRType* resultType = translator->FindType(functionCallNode->ResultType, functionCallNode);
-
-  ZilchShaderIROp* result = translator->BuildIROpNoBlockAdd(opType, resultType, context);
-  for (size_t i = 0; i < functionCallNode->Arguments.Size(); ++i)
-  {
-    ZilchShaderIROp* arg = translator->WalkAndGetValueTypeResult(functionCallNode->Arguments[i], context);
-    result->mArguments.PushBack(arg);
-  }
-  context->GetCurrentBlock()->AddOp(result);
-  context->PushIRStack(result);
-}
 
 void ResolveVectorTypeCount(ZilchSpirVFrontEnd* translator,
                             Zilch::FunctionCallNode* functionCallNode,

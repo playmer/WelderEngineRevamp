@@ -16,6 +16,99 @@ enum Enum
 };
 }
 
+
+// Enable if helpers
+namespace EnableIf
+{
+template <typename tType>
+using IsNotVoid = std::enable_if_t<!std::is_void_v<tType>>;
+
+template <typename tType>
+using IsVoid = std::enable_if_t<std::is_void_v<tType>>;
+
+template <typename tType>
+using IsMoveConstructible = std::enable_if_t<std::is_move_constructible_v<tType>>;
+
+template <typename tType>
+using IsNotMoveConstructible = std::enable_if_t<!std::is_move_constructible_v<tType>>;
+
+template <typename tType>
+using IsCopyConstructible = std::enable_if_t<std::is_copy_constructible_v<tType>>;
+
+template <typename tType>
+using IsNotCopyConstructible = std::enable_if_t<!std::is_copy_constructible_v<tType>>;
+
+template <typename tType>
+using IsDefaultConstructible = std::enable_if_t<std::is_default_constructible_v<tType>>;
+
+template <typename tType>
+using IsNotDefaultConstructible = std::enable_if_t<!std::is_default_constructible_v<tType>>;
+}
+
+
+namespace Details
+{
+template <typename tType>
+using GetBindingType = typename Zilch::TypeBinding::StaticTypeId<tType>::BindingType;
+
+template <typename tType>
+static BoundType*& GetStaticType()
+{
+  return TypeBinding::StaticTypeId<Type>::GetType();
+}
+
+template <typename Return>
+struct DecomposeFunctionObjectType
+{
+  using ObjectType = std::nullptr_t;
+};
+
+template <typename Return, typename... Arguments>
+struct DecomposeFunctionObjectType<Return (*)(Arguments...)>
+{
+  using ReturnType = Return;
+};
+
+template <typename Return, typename Object>
+struct DecomposeFunctionObjectType<Return (Object::*)()>
+{
+  using ReturnType = Return;
+  using ObjectType = Object;
+};
+
+template <typename Return, typename Object, typename... Arguments>
+struct DecomposeFunctionObjectType<Return (Object::*)(Arguments...)>
+{
+  using ReturnType = Return;
+  using ObjectType = Object;
+};
+
+template <typename Return, typename Object, typename... Arguments>
+struct DecomposeFunctionObjectType<Return (Object::*)(Arguments...) const>
+{
+  using ReturnType = Return;
+  using ObjectType = Object;
+};
+
+template <typename tFunctionSignature>
+constexpr auto SelectOverload(tFunctionSignature aBoundFunction) -> tFunctionSignature
+{
+  return aBoundFunction;
+}
+
+
+// template <std::size_t aCount>
+// auto GetArgumentArray() -> Zilch::byte*[aCount]
+//{
+//
+//}
+}
+
+
+
+
+
+
 // All things relevant to binding methods
 class ZeroShared TemplateBinding
 {
@@ -27,10 +120,376 @@ public:
   // immediately return with no errors
   static void ParseParameterArrays(ParameterArray& parameters, StringRange commaDelimitedNames);
 
+  
+  template <typename... tArguments>
+  static void BuildParameterArrays(ParameterArray& parameters)
+  {
+    (parameters.PushBack(Details::GetStaticType<tArguments>()), ...);
+  }
+
   // Validate that a destructor has been bound (asserts within binding
   // constructors) This just returns the same bound type that is used, which
   // allows us to use this as an expression
   static BoundType* ValidateConstructorBinding(BoundType* type);
+
+
+
+
+
+
+  
+  //auto function = Detail::Meta::FunctionBinding<FunctionSignature>::template BindFunction<tBoundFunction>(aName);
+
+  template <typename tFunctionSignature>
+  struct FunctionBinding
+  {
+    template <typename Return, typename = void>
+    struct FunctionInvoker
+    {
+    };
+
+    /////////////////////////////////////////////
+    // Free/Static Functions
+    // Returns Something
+    template <typename tReturn, typename... tArguments>
+    struct FunctionInvoker<tReturn(tArguments...), EnableIf::IsNotVoid<tReturn>>
+    {
+      static void ParameterArrayBuilder(ParameterArray& parameters)
+      {
+        BuildParameterArrays<tArguments...>(parameters);
+      }
+
+
+      template <tFunctionSignature function>
+      static void BoundFunction(Call& call, ExceptionReport& report)
+      {
+        constexpr std::size_t numberOfArguments = sizeof...(tArguments);
+
+        if constexpr (0 != numberOfArguments)
+        {
+          std::size_t i = 0;
+
+          byte* byteArgs[numberOfArguments]{call.GetArgumentPointer<Details::GetBindingType<tArguments>>(i++)...};
+
+          if (report.HasThrownExceptions())
+          {
+            return;
+          }
+
+          i = 0;
+
+          tReturn result = function(call.CastArgumentPointer<Details::GetBindingType<tArguments>>(byteArgs[i++])...);
+
+          if (report.HasThrownExceptions())
+          {
+            return;
+          }
+
+          call.Set<tReturn>(Call::Return, result);
+        }
+        else
+        {
+          tReturn result = function();
+
+          if (report.HasThrownExceptions())
+          {
+            return;
+          }
+
+          call.Set<tReturn>(Call::Return, result);
+        }
+      }
+    };
+
+    // Void Return
+    template <typename tReturn, typename... tArguments>
+    struct FunctionInvoker<tReturn(tArguments...), EnableIf::IsVoid<tReturn>>
+    {
+      static void ParameterArrayBuilder(ParameterArray& parameters)
+      {
+        BuildParameterArrays<tArguments...>(parameters);
+      }
+
+      template <tFunctionSignature function>
+      static void BoundFunction(Call& call, ExceptionReport& report)
+      {
+        constexpr std::size_t numberOfArguments = sizeof...(tArguments);
+
+        // call.
+
+        if constexpr (0 != numberOfArguments)
+        {
+          std::size_t i = 0;
+
+          byte* byteArgs[numberOfArguments]{call.GetArgumentPointer<Details::GetBindingType<tArguments>>(i++)...};
+
+          if (report.HasThrownExceptions())
+          {
+            return;
+          }
+
+          i = 0;
+
+          function(call.CastArgumentPointer<Details::GetBindingType<tArguments>>(byteArgs[i++])...);
+        }
+        else
+        {
+          function();
+        }
+      }
+    };
+
+    /////////////////////////////////////////////
+    // Free/Static Noexcept Function Pointers
+    // Returns Something
+    template <typename tReturn, typename... tArguments>
+    struct FunctionInvoker<tReturn(tArguments...) noexcept, EnableIf::IsNotVoid<tReturn>>
+        : public FunctionInvoker<tReturn(tArguments...), EnableIf::IsNotVoid<tReturn>>
+    {
+    };
+
+    // Void Return
+    template <typename tReturn, typename... tArguments>
+    struct FunctionInvoker<tReturn(tArguments...) noexcept, EnableIf::IsVoid<tReturn>>
+        : public FunctionInvoker<tReturn(tArguments...), EnableIf::IsVoid<tReturn>>
+    {
+    };
+
+    /////////////////////////////////////////////
+    // Free/Static Function Pointers
+    // Returns Something
+    template <typename tReturn, typename... tArguments>
+    struct FunctionInvoker<tReturn (*)(tArguments...), EnableIf::IsNotVoid<tReturn>>
+        : public FunctionInvoker<tReturn(tArguments...), EnableIf::IsNotVoid<tReturn>>
+    {
+    };
+
+    // Void Return
+    template <typename tReturn, typename... tArguments>
+    struct FunctionInvoker<tReturn (*)(tArguments...), EnableIf::IsVoid<tReturn>>
+        : public FunctionInvoker<tReturn(tArguments...), EnableIf::IsVoid<tReturn>>
+    {
+    };
+
+    /////////////////////////////////////////////
+    // Free/Static Noexcept Function Pointers
+    // Returns Something
+    template <typename tReturn, typename... tArguments>
+    struct FunctionInvoker<tReturn (*)(tArguments...) noexcept, EnableIf::IsNotVoid<tReturn>>
+        : public FunctionInvoker<tReturn(tArguments...), EnableIf::IsNotVoid<tReturn>>
+    {
+    };
+
+    // Void Return
+    template <typename tReturn, typename... tArguments>
+    struct FunctionInvoker<tReturn (*)(tArguments...) noexcept, typename EnableIf::IsVoid<tReturn>>
+        : public FunctionInvoker<tReturn(tArguments...), EnableIf::IsVoid<tReturn>>
+    {
+    };
+
+
+    
+    /////////////////////////////////////////////
+    // Member Functions
+    // Returns Something
+    template <typename tReturn, typename tObject, typename... tArguments>
+    struct FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsNotVoid<tReturn>>
+    {
+      static void ParameterArrayBuilder(ParameterArray& parameters)
+      {
+        BuildParameterArrays<tArguments...>(parameters);
+      }
+
+      template <tFunctionSignature function>
+      static void BoundFunction(Call& call, ExceptionReport& report)
+      {
+        constexpr std::size_t numberOfArguments = sizeof...(tArguments);
+
+        if constexpr (0 != numberOfArguments)
+        {
+          std::size_t i = 0;
+
+          byte* byteArgs[numberOfArguments]{call.GetArgumentPointer<Details::GetBindingType<tArguments>>(i++)...};
+
+          if (report.HasThrownExceptions())
+          {
+            return;
+          }
+
+          tObject* self = (tObject*)call.GetHandle(Call::This).Dereference();
+
+          i = 0;
+
+          tReturn result = (self->*function)(call.CastArgumentPointer<Details::GetBindingType<tArguments>>(byteArgs[i++])...);
+
+          if (report.HasThrownExceptions())
+          {
+            return;
+          }
+
+          call.Set<tReturn>(Call::Return, result);
+        }
+        else
+        {
+          tObject* self = (tObject*)call.GetHandle(Call::This).Dereference();
+
+          tReturn result = (self->*function)();
+
+          if (report.HasThrownExceptions())
+          {
+            return;
+          }
+
+          call.Set<tReturn>(Call::Return, result);
+        }
+      }
+    };
+
+    // Void Return
+    template <typename tReturn, typename tObject, typename... tArguments>
+    struct FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsVoid<tReturn>>
+    {
+      static void ParameterArrayBuilder(ParameterArray& parameters)
+      {
+        BuildParameterArrays<tArguments...>(parameters);
+      }
+
+      template <tFunctionSignature function>
+      static void BoundFunction(Call& call, ExceptionReport& report)
+      {
+        constexpr std::size_t numberOfArguments = sizeof...(tArguments);
+
+        if constexpr (0 != numberOfArguments)
+        {
+          std::size_t i = 0;
+
+          byte* byteArgs[numberOfArguments]{call.GetArgumentPointer<Details::GetBindingType<tArguments>>(i++)...};
+
+          if (report.HasThrownExceptions())
+          {
+            return;
+          }
+
+          tObject* self = (tObject*)call.GetHandle(Call::This).Dereference();
+
+          i = 0;
+
+          (self->*function)(call.CastArgumentPointer<Details::GetBindingType<tArguments>>(byteArgs[i++])...);
+        }
+        else
+        {
+          tObject* self = (tObject*)call.GetHandle(Call::This).Dereference();
+
+          (self->*function)();
+        }
+      }
+    };
+
+    /////////////////////////////////////////////
+    // Noexcept Member Functions
+    // Returns Something
+    template <typename tReturn, typename tObject, typename... tArguments>
+    struct FunctionInvoker<tReturn (tObject::*)(tArguments...) noexcept, EnableIf::IsNotVoid<tReturn>>
+        : public FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsNotVoid<tReturn>>
+    {
+    };
+
+    // Void Return
+    template <typename tReturn, typename tObject, typename... tArguments>
+    struct FunctionInvoker<tReturn (tObject::*)(tArguments...) noexcept, EnableIf::IsVoid<tReturn>>
+        : public FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsVoid<tReturn>>
+    {
+    };
+
+    /////////////////////////////////////////////
+    // Const Member Functions
+    // Returns Something
+    template <typename tReturn, typename tObject, typename... tArguments>
+    struct FunctionInvoker<tReturn (tObject::*)(tArguments...) const, EnableIf::IsNotVoid<tReturn>>
+        : public FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsNotVoid<tReturn>>
+    {
+    };
+
+    // Void Return
+    template <typename tReturn, typename tObject, typename... tArguments>
+    struct FunctionInvoker<tReturn (tObject::*)(tArguments...) const, EnableIf::IsVoid<tReturn>>
+        : public FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsVoid<tReturn>>
+    {
+    };
+
+    /////////////////////////////////////////////
+    // Const Noexcept Member Functions
+    // Returns Something
+    template <typename tReturn, typename tObject, typename... tArguments>
+    struct FunctionInvoker<tReturn (tObject::*)(tArguments...) const noexcept, EnableIf::IsNotVoid<tReturn>>
+        : public FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsNotVoid<tReturn>>
+    {
+    };
+
+    // Void Return
+    template <typename tReturn, typename tObject, typename... tArguments>
+    struct FunctionInvoker<tReturn (tObject::*)(tArguments...) const noexcept, EnableIf::IsVoid<tReturn>>
+        : public FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsVoid<tReturn>>
+    {
+    };
+
+    template<auto aFunction>
+    static constexpr auto GetFunctionInvoker() -> BoundFn
+    {
+      return FunctionInvoker<tFunctionSignature>::template BoundFunction<aFunction>;
+    }
+
+    template <auto aFunction>
+    static Function*
+    MakeFunction(LibraryBuilder& builder, BoundType* classBoundType, StringRange name, StringRange spaceDelimitedNames)
+    {
+      using tReturnType = typename Details::DecomposeFunctionObjectType<tFunctionSignature>::ReturnType;
+      BoundFn boundFunction = GetFunctionInvoker<aFunction>();
+      ParameterArray parameters;
+      FunctionInvoker<tFunctionSignature>::ParameterArrayBuilder(parameters);
+
+      ParseParameterArrays(parameters, spaceDelimitedNames);
+      return builder.AddBoundFunction(
+          classBoundType, name, boundFunction, parameters, Details::GetStaticType<tReturnType>(), FunctionOptions::None);
+    }
+
+    };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Include all the binding code
 #  include "MethodBinding.inl"
