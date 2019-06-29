@@ -31,7 +31,7 @@ StringParam GetApplicationName();
 StringParam GetOrganization();
 
 /// Version of the configuration file we're loading (bumped for breaking changes).
-uint GetConfigVersion();
+//uint GetConfigVersion();
 
 /// The major version number denotes breaking changes to the build.
 uint GetMajorVersion();

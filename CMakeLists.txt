@@ -1,24 +1,34 @@
 cmake_minimum_required(VERSION 3.12.1 FATAL_ERROR)
 
 # There is a problem with clang using the default gcc headers on Ubuntu (remove #error).
-add_definitions(-D__STDC__)
+#add_definitions(-D__STDC__)
 
-set(CMAKE_CONFIGURATION_TYPES Debug RelWithDebInfo Release MinSizeRel)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT WelderEditor)
+#set(CMAKE_CONFIGURATION_TYPES Debug RelWithDebInfo Release MinSizeRel)
+#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+#set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT WelderEditor)
 
-find_program(WELDER_IWYU_PATH NAMES include-what-you-use iwyu)
-if(WELDER_IWYU_PATH)
-  message(STATUS "Found iwyu at ${WELDER_IWYU_PATH}")
-endif()
+#find_program(WELDER_IWYU_PATH NAMES include-what-you-use iwyu)
+#if(WELDER_IWYU_PATH)
+#  message(STATUS "Found iwyu at ${WELDER_IWYU_PATH}")
+#endif()
 
-find_program(WELDER_CCACHE_PATH ccache)
-if(WELDER_CCACHE_PATH)
-  message(STATUS "Found ccache at ${WELDER_CCACHE_PATH}")
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${WELDER_CCACHE_PATH}")
-endif()
+#find_program(WELDER_CCACHE_PATH ccache)
+#if(WELDER_CCACHE_PATH)
+#  message(STATUS "Found ccache at ${WELDER_CCACHE_PATH}")
+#  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${WELDER_CCACHE_PATH}")
+#endif()
 
 project(Welder)
+
+#option(WELDER_REVISION "WELDER_REVISION" )
+#option(WELDER_SHORT_CHANGESET "WELDER_SHORT_CHANGESET" )
+#option(WELDER_CHANGESET "WELDER_CHANGESET" )
+#option(WELDER_CHANGESET_DATE "WELDER_CHANGESET_DATE" )
+set(WELDER_ARCHITECTURE X64 CACHE STRING "Sets the WELDER_ARCHITECTURE")
+set(WELDER_HOSTOS Windows CACHE STRING "Sets the WELDER_HOSTOS")
+set(WELDER_TARGETOS Windows CACHE STRING "Sets the WELDER_TARGETOS")
+set(WELDER_PLATFORM Windows CACHE STRING "Sets the WELDER_PLATFORM")
+set(WELDER_TOOLCHAIN MSVC CACHE STRING "Sets the WELDER_TOOLCHAIN")
 
 add_definitions(-DWelderRevisionId=${WELDER_REVISION})
 add_definitions(-DWelderShortChangeSet=${WELDER_SHORT_CHANGESET})
@@ -40,62 +50,62 @@ set(WELDER_TOOLCHAIN_DIR ${WELDER_CMAKE_DIR}/Toolchain/)
 set(WELDER_TARGETOS_DIR ${WELDER_CMAKE_DIR}/TargetOs/)
 set(WELDER_LIBRARIES_DIR ${WELDER_CORE_DIR}/Libraries/)
 set(WELDER_PLATFORM_DATA_DIR ${WELDER_CORE_DIR}/PlatformData/${WELDER_TOOLCHAIN})
-set(WELDER_VIRTUAL_FILE_SYSTEM_ZIP ${CMAKE_BINARY_DIR}/FileSystem.zip)
+#set(WELDER_VIRTUAL_FILE_SYSTEM_ZIP ${CMAKE_BINARY_DIR}/FileSystem.zip)
 
-add_custom_target(VirtualFileSystemZip
-  #COMMAND ${CMAKE_COMMAND} -E tar "cfv" "${WELDER_VIRTUAL_FILE_SYSTEM_ZIP}" --format=zip
-  COMMAND 7z a -tzip -mx=9 -mfb=128 -mpass=10 ${WELDER_VIRTUAL_FILE_SYSTEM_ZIP}
-    "Resources"
-    "Data"
-    ".welder"
-  WORKING_DIRECTORY ${WELDER_CORE_DIR}
-)
+#add_custom_target(VirtualFileSystemZip
+#  #COMMAND ${CMAKE_COMMAND} -E tar "cfv" "${WELDER_VIRTUAL_FILE_SYSTEM_ZIP}" --format=zip
+#  COMMAND 7z a -tzip -mx=9 -mfb=128 -mpass=10 ${WELDER_VIRTUAL_FILE_SYSTEM_ZIP}
+#    "Resources"
+#    "Data"
+#    ".welder"
+#  WORKING_DIRECTORY ${WELDER_CORE_DIR}
+#)
 
 function(welder_setup_library target directory)
   target_include_directories(${target} PUBLIC ${directory} ${WELDER_LIBRARIES_DIR})
   #set_property(TARGET ${target} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${WELDER_IWYU_PATH})
 endfunction()
 
-function(welder_get_all_dependencies outputList TARGET)
-    list(APPEND visitedTargets ${TARGET})
-    get_target_property(dependencies ${TARGET} INTERFACE_LINK_LIBRARIES)
-    get_target_property(targetType ${TARGET} TYPE)
-    if (NOT targetType STREQUAL "INTERFACE_LIBRARY")
-      get_target_property(manualDependencies ${TARGET} MANUALLY_ADDED_DEPENDENCIES)
-      list(APPEND dependencies ${manualDependencies})
-    endif()
-    set(allLinkedLibs "")
-    foreach(dependency ${dependencies})
-        if (TARGET ${dependency})
-            list(FIND visitedTargets ${dependency} VISITED)
-            if (${VISITED} EQUAL -1)
-                welder_get_all_dependencies(childLinkedLibs ${dependency})
-                list(APPEND allLinkedLibs ${dependency} ${childLinkedLibs})
-            endif()
-        endif()
-    endforeach()
-    set(visitedTargets ${visitedTargets} PARENT_SCOPE)
-    set(${outputList} ${allLinkedLibs} PARENT_SCOPE)
-endfunction()
-
-function(welder_copy_from_linked_libraries target)
-  welder_get_all_dependencies(dependencies ${target})
-  foreach(dependency ${dependencies})
-    set(directory "${${dependency}CopyDirectories}")
-    if(directory)
-      add_custom_command(TARGET ${target} POST_BUILD COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${directory} $<TARGET_FILE_DIR:${target}>)
-    endif()
-  endforeach()
-endfunction()
+#function(welder_get_all_dependencies outputList TARGET)
+#    list(APPEND visitedTargets ${TARGET})
+#    get_target_property(dependencies ${TARGET} INTERFACE_LINK_LIBRARIES)
+#    get_target_property(targetType ${TARGET} TYPE)
+#    if (NOT targetType STREQUAL "INTERFACE_LIBRARY")
+#      get_target_property(manualDependencies ${TARGET} MANUALLY_ADDED_DEPENDENCIES)
+#      list(APPEND dependencies ${manualDependencies})
+#    endif()
+#    set(allLinkedLibs "")
+#    foreach(dependency ${dependencies})
+#        if (TARGET ${dependency})
+#            list(FIND visitedTargets ${dependency} VISITED)
+#            if (${VISITED} EQUAL -1)
+#                welder_get_all_dependencies(childLinkedLibs ${dependency})
+#                list(APPEND allLinkedLibs ${dependency} ${childLinkedLibs})
+#            endif()
+#        endif()
+#    endforeach()
+#    set(visitedTargets ${visitedTargets} PARENT_SCOPE)
+#    set(${outputList} ${allLinkedLibs} PARENT_SCOPE)
+#endfunction()
+#
+#function(welder_copy_from_linked_libraries target)
+#  welder_get_all_dependencies(dependencies ${target})
+#  foreach(dependency ${dependencies})
+#    set(directory "${${dependency}CopyDirectories}")
+#    if(directory)
+#      add_custom_command(TARGET ${target} POST_BUILD COMMAND
+#        ${CMAKE_COMMAND} -E copy_directory ${directory} $<TARGET_FILE_DIR:${target}>)
+#    endif()
+#  endforeach()
+#endfunction()
 
 function(welder_target_includes target)
   set(multiValueArgs PUBLIC)
   cmake_parse_arguments(WELDER "" "" "${multiValueArgs}" "${ARGN}")
 
   foreach(fromTarget ${WELDER_PUBLIC})
-  target_include_directories(${target} PUBLIC $<TARGET_PROPERTY:${fromTarget},INTERFACE_INCLUDE_DIRECTORIES>)
-  target_compile_definitions(${target} PUBLIC $<TARGET_PROPERTY:${fromTarget},INTERFACE_COMPILE_DEFINITIONS>)
+    target_include_directories(${target} PUBLIC $<TARGET_PROPERTY:${fromTarget},INTERFACE_INCLUDE_DIRECTORIES>)
+    target_compile_definitions(${target} PUBLIC $<TARGET_PROPERTY:${fromTarget},INTERFACE_COMPILE_DEFINITIONS>)
   endforeach()
 endfunction()
 
@@ -152,3 +162,4 @@ add_subdirectory(Libraries/Platform/${WELDER_PLATFORM})
 
 add_subdirectory(External)
 add_subdirectory(Libraries)
+add_subdirectory(JoshDavisClass)
