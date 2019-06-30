@@ -498,7 +498,7 @@ public:
 
 
 // Include all the binding code
-#  include "MethodBinding.inl"
+//#  include "MethodBinding.inl"
 #  include "VirtualMethodBinding.inl"
 #  include "ConstructorBinding.inl"
 
@@ -689,8 +689,8 @@ public:
     ErrorIf(dummyGetter != getter, "The dummy getter should always match our template member");
     ErrorIf(dummySetter != setter, "The dummy getter should always match our template member");
 
-    BoundFn boundGet = BoundInstanceReturn<GetterType, getter, Class, GetType>;
-    BoundFn boundSet = BoundInstance<SetterType, setter, Class, SetType>;
+    BoundFn boundGet = FunctionBinding<GetterType>::template GetFunctionInvoker<getter>();
+    BoundFn boundSet = FunctionBinding<SetterType>::template GetFunctionInvoker<setter>();
 
     return builder.AddBoundGetterSetter(owner, name, ZilchTypeId(GetType), boundSet, boundGet, MemberOptions::None);
   }
@@ -717,8 +717,8 @@ public:
     ErrorIf(dummyGetter != getter, "The dummy getter should always match our template member");
     ErrorIf(dummySetter != setter, "The dummy getter should always match our template member");
 
-    BoundFn boundGet = BoundInstanceReturn<GetterType, getter, Class, GetType>;
-    BoundFn boundSet = BoundInstance<SetterType, setter, Class, SetType>;
+    BoundFn boundGet = FunctionBinding<GetterType>::template GetFunctionInvoker<getter>();
+    BoundFn boundSet = FunctionBinding<SetterType>::template GetFunctionInvoker<setter>();
 
     return builder.AddBoundGetterSetter(owner, name, ZilchTypeId(GetType), boundSet, boundGet, MemberOptions::None);
   }
@@ -734,7 +734,8 @@ public:
       LibraryBuilder& builder, BoundType* owner, StringRange name, GetType (Class::*dummyGetter)(), NullPointerType)
   {
     ErrorIf(dummyGetter != getter, "The dummy getter should always match our template member");
-    BoundFn boundGet = BoundInstanceReturn<GetterType, getter, Class, GetType>;
+
+    BoundFn boundGet = FunctionBinding<GetterType>::template GetFunctionInvoker<getter>();
     return builder.AddBoundGetterSetter(owner, name, ZilchTypeId(GetType), nullptr, boundGet, MemberOptions::None);
   }
 
@@ -752,7 +753,7 @@ public:
                                         NullPointerType)
   {
     ErrorIf(dummyGetter != getter, "The dummy getter should always match our template member");
-    BoundFn boundGet = BoundInstanceReturn<GetterType, getter, Class, GetType>;
+    BoundFn boundGet = FunctionBinding<GetterType>::template GetFunctionInvoker<getter>();
     return builder.AddBoundGetterSetter(owner, name, ZilchTypeId(GetType), nullptr, boundGet, MemberOptions::None);
   }
 
@@ -767,7 +768,7 @@ public:
       LibraryBuilder& builder, BoundType* owner, StringRange name, NullPointerType, void (Class::*dummySetter)(SetType))
   {
     ErrorIf(dummySetter != setter, "The dummy setter should always match our template member");
-    BoundFn boundSet = BoundInstance<SetterType, setter, Class, SetType>;
+    BoundFn boundSet = FunctionBinding<SetterType>::template GetFunctionInvoker<setter>();
     return builder.AddBoundGetterSetter(owner, name, ZilchTypeId(SetType), boundSet, nullptr, MemberOptions::None);
   }
 
@@ -792,8 +793,8 @@ public:
     ErrorIf(dummyGetter != getter, "The dummy getter should always match our template member");
     ErrorIf(dummySetter != setter, "The dummy getter should always match our template member");
 
-    BoundFn boundGet = BoundStaticReturn<GetterType, getter, GetType>;
-    BoundFn boundSet = BoundStatic<SetterType, setter, SetType>;
+    BoundFn boundGet = FunctionBinding<GetterType>::template GetFunctionInvoker<getter>();
+    BoundFn boundSet = FunctionBinding<SetterType>::template GetFunctionInvoker<setter>();
 
     return builder.AddBoundGetterSetter(owner, name, ZilchTypeId(GetType), boundSet, boundGet, MemberOptions::Static);
   }
@@ -804,7 +805,7 @@ public:
       LibraryBuilder& builder, BoundType* owner, StringRange name, GetType (*dummyGetter)(), NullPointerType)
   {
     ErrorIf(dummyGetter != getter, "The dummy getter should always match our template member");
-    BoundFn boundGet = BoundStaticReturn<GetterType, getter, GetType>;
+    BoundFn boundGet = FunctionBinding<GetterType>::template GetFunctionInvoker<getter>();
     return builder.AddBoundGetterSetter(owner, name, ZilchTypeId(GetType), nullptr, boundGet, MemberOptions::Static);
   }
 
@@ -814,7 +815,7 @@ public:
       LibraryBuilder& builder, BoundType* owner, StringRange name, NullPointerType, void (*dummySetter)(SetType))
   {
     ErrorIf(dummySetter != setter, "The dummy setter should always match our template member");
-    BoundFn boundSet = BoundStatic<SetterType, setter, SetType>;
+    BoundFn boundSet = FunctionBinding<SetterType>::template GetFunctionInvoker<setter>();
     return builder.AddBoundGetterSetter(owner, name, ZilchTypeId(SetType), boundSet, nullptr, MemberOptions::Static);
   }
 };

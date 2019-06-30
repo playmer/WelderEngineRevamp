@@ -29,7 +29,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              void (Class::*)())
 {
-  BoundFn boundFunction = BoundInstance<FunctionType, function, Class>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunk<FunctionType, function, Class, void>);
   ParameterArray parameters;
   ParseParameterArrays(parameters, spaceDelimitedNames);
@@ -76,7 +76,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              void (Class::*)(Arg0))
 {
-  BoundFn boundFunction = BoundInstance<FunctionType, function, Class, Arg0>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunk<FunctionType, function, Class, void, Arg0>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -126,7 +126,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              void (Class::*)(Arg0, Arg1))
 {
-  BoundFn boundFunction = BoundInstance<FunctionType, function, Class, Arg0, Arg1>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunk<FunctionType, function, Class, void, Arg0, Arg1>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -179,7 +179,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              void (Class::*)(Arg0, Arg1, Arg2))
 {
-  BoundFn boundFunction = BoundInstance<FunctionType, function, Class, Arg0, Arg1, Arg2>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunk<FunctionType, function, Class, void, Arg0, Arg1, Arg2>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -247,7 +247,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              void (Class::*)(Arg0, Arg1, Arg2, Arg3))
 {
-  BoundFn boundFunction = BoundInstance<FunctionType, function, Class, Arg0, Arg1, Arg2, Arg3>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunk<FunctionType, function, Class, void, Arg0, Arg1, Arg2, Arg3>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -320,7 +320,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              void (Class::*)(Arg0, Arg1, Arg2, Arg3, Arg4))
 {
-  BoundFn boundFunction = BoundInstance<FunctionType, function, Class, Arg0, Arg1, Arg2, Arg3, Arg4>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunk<FunctionType, function, Class, void, Arg0, Arg1, Arg2, Arg3, Arg4>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -398,7 +398,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              void (Class::*)(Arg0, Arg1, Arg2, Arg3, Arg4, Arg5))
 {
-  BoundFn boundFunction = BoundInstance<FunctionType, function, Class, Arg0, Arg1, Arg2, Arg3, Arg4, Arg5>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunk<FunctionType, function, Class, void, Arg0, Arg1, Arg2, Arg3, Arg4, Arg5>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -481,7 +481,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              void (Class::*)(Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6))
 {
-  BoundFn boundFunction = BoundInstance<FunctionType, function, Class, Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunk<FunctionType, function, Class, void, Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -541,7 +541,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              Return (Class::*)())
 {
-  BoundFn boundFunction = BoundInstanceReturn<FunctionType, function, Class, Return>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunkReturn<FunctionType, function, Class, Return>);
   ParameterArray parameters;
   ParseParameterArrays(parameters, spaceDelimitedNames);
@@ -588,7 +588,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              Return (Class::*)(Arg0))
 {
-  BoundFn boundFunction = BoundInstanceReturn<FunctionType, function, Class, Return, Arg0>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunkReturn<FunctionType, function, Class, Return, Arg0>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -638,7 +638,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              Return (Class::*)(Arg0, Arg1))
 {
-  BoundFn boundFunction = BoundInstanceReturn<FunctionType, function, Class, Return, Arg0, Arg1>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunkReturn<FunctionType, function, Class, Return, Arg0, Arg1>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -703,7 +703,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              Return (Class::*)(Arg0, Arg1, Arg2))
 {
-  BoundFn boundFunction = BoundInstanceReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunkReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -773,7 +773,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              Return (Class::*)(Arg0, Arg1, Arg2, Arg3))
 {
-  BoundFn boundFunction = BoundInstanceReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2, Arg3>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunkReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2, Arg3>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -848,7 +848,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              Return (Class::*)(Arg0, Arg1, Arg2, Arg3, Arg4))
 {
-  BoundFn boundFunction = BoundInstanceReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2, Arg3, Arg4>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunkReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2, Arg3, Arg4>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -928,8 +928,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              Return (Class::*)(Arg0, Arg1, Arg2, Arg3, Arg4, Arg5))
 {
-  BoundFn boundFunction =
-      BoundInstanceReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2, Arg3, Arg4, Arg5>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunkReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2, Arg3, Arg4, Arg5>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
@@ -1014,8 +1013,7 @@ static Function* FromVirtual(LibraryBuilder& builder,
                              StringRange spaceDelimitedNames,
                              Return (Class::*)(Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6))
 {
-  BoundFn boundFunction =
-      BoundInstanceReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>;
+  BoundFn boundFunction = FunctionBinding<FunctionType>::template GetFunctionInvoker<function>();
   auto thunk = (&VirtualThunkReturn<FunctionType, function, Class, Return, Arg0, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>);
   ParameterArray parameters;
   DelegateParameter& p0 = parameters.PushBack();
