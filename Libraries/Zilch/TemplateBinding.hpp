@@ -307,6 +307,35 @@ public:
       }
 
       template <tFunctionSignature function>
+      static tReturn VirtualThunk(tArguments... aArguments)
+      {
+        byte* virtualTable = *(byte**)this;
+        byte* typePointer = virtualTable - sizeof(BoundType*) - sizeof(ExecutableState*);
+        byte* executableStatePointer = virtualTable - sizeof(ExecutableState*);
+        BoundType* type = *(BoundType**)typePointer;
+        ExecutableState* state = *(ExecutableState**)(executableStatePointer);
+        GuidType virtualId = type->Hash() ^ TypeBinding::GetFunctionUniqueId<tFunctionSignature, function>();
+        Function* functionToCall = state->ThunksToFunctions.FindValue(virtualId, nullptr);
+        ErrorIf(functionToCall == nullptr, "There was no function found by the guid, what happened?");
+        HandleManagers& managers = HandleManagers::GetInstance();
+        HandleManager* pointerManager = managers.GetManager(ZilchManagerId(PointerManager));
+        Handle thisHandle;
+        thisHandle.Manager = pointerManager;
+        thisHandle.StoredType = type;
+        pointerManager->ObjectToHandle((byte*)this, type, thisHandle);
+        Call call(functionToCall, state);
+        call.SetHandle(Call::This, thisHandle);
+
+        size_t i = 0;
+        (call.Set<tArguments>(i++, aArguments), ...);
+
+        ExceptionReport report;
+        call.Invoke(report);
+
+        return call.Get<tReturn>(Call::Return);
+      }
+
+      template <tFunctionSignature function>
       static void BoundFunction(Call& call, ExceptionReport& report)
       {
         constexpr std::size_t numberOfArguments = sizeof...(tArguments);
@@ -358,6 +387,34 @@ public:
       static void ParameterArrayBuilder(ParameterArray& parameters)
       {
         BuildParameterArrays<tArguments...>(parameters);
+      }
+      
+      template <tFunctionSignature function>
+      void VirtualThunk(tArguments... aArguments)
+      {
+        byte* virtualTable = *(byte**)this;
+        byte* typePointer = virtualTable - sizeof(BoundType*) - sizeof(ExecutableState*);
+        byte* executableStatePointer = virtualTable - sizeof(ExecutableState*);
+        BoundType* type = *(BoundType**)typePointer;
+        ExecutableState* state = *(ExecutableState**)(executableStatePointer);
+        GuidType virtualId = type->Hash() ^ TypeBinding::GetFunctionUniqueId<tFunctionSignature, function>();
+        Function* functionToCall = state->ThunksToFunctions.FindValue(virtualId, nullptr);
+        ErrorIf(functionToCall == nullptr, "There was no function found by the guid, what happened?");
+        HandleManagers& managers = HandleManagers::GetInstance();
+        HandleManager* pointerManager = managers.GetManager(ZilchManagerId(PointerManager));
+        Handle thisHandle;
+        thisHandle.Manager = pointerManager;
+        thisHandle.StoredType = type;
+        pointerManager->ObjectToHandle((byte*)this, type, thisHandle);
+        Call call(functionToCall, state);
+        call.SetHandle(Call::This, thisHandle);
+
+        size_t i = 0;
+        (call.Set<tArguments>(i++, aArguments), ...);
+
+        ExceptionReport report;
+        call.Invoke(report);
+        return;
       }
 
       template <tFunctionSignature function>
@@ -446,6 +503,12 @@ public:
     }
 
     template <auto aFunction>
+    static constexpr auto GetVirtualFunctionInvoker()
+    {
+      return FunctionInvoker<tFunctionSignature>::template VirtualThunk<aFunction>;
+    }
+
+    template <auto aFunction>
     static Function*
     MakeFunction(LibraryBuilder& builder, BoundType* classBoundType, StringRange name, StringRange spaceDelimitedNames)
     {
@@ -457,6 +520,42 @@ public:
       ParseParameterArrays(parameters, spaceDelimitedNames);
       return builder.AddBoundFunction(
           classBoundType, name, boundFunction, parameters, Details::GetStaticType<tReturnType>(), FunctionOptions::None);
+    }
+
+    
+
+    template <auto aFunction>
+    static Function*
+    MakeVirtualFunction(LibraryBuilder& builder, BoundType* classBoundType, StringRange name, StringRange spaceDelimitedNames)
+    {
+      using tReturnType = typename Details::DecomposeFunctionObjectType<tFunctionSignature>::ReturnType;
+      BoundFn boundFunction = GetFunctionInvoker<aFunction>();
+      auto thunk = GetVirtualFunctionInvoker<aFunction>();
+
+      ParameterArray parameters;
+      FunctionInvoker<tFunctionSignature>::ParameterArrayBuilder(parameters);
+
+      ParseParameterArrays(parameters, spaceDelimitedNames);
+
+      NativeVirtualInfo nativeVirtual;
+      nativeVirtual.Index = TypeBinding::GetVirtualMethodIndex(aFunction);
+      nativeVirtual.Thunk = (TypeBinding::VirtualTableFn)thunk;
+      nativeVirtual.Guid = TypeBinding::GetFunctionUniqueId<tFunctionSignature, aFunction>();
+
+      auto functionRef = builder.AddBoundFunction(classBoundType,
+                                                  name,
+                                                  boundFunction,
+                                                  parameters,
+                                                  Details::GetStaticType<tReturnType>(),
+                                                  FunctionOptions::Virtual,
+                                                  nativeVirtual);
+
+      ++classBoundType->BoundNativeVirtualCount;
+      ErrorIf(classBoundType->BoundNativeVirtualCount > classBoundType->RawNativeVirtualCount,
+              "The number of bound virtual functions must never exceed the actual "
+              "v-table count");
+
+      return functionRef;
     }
 
     };
@@ -499,7 +598,7 @@ public:
 
 // Include all the binding code
 //#  include "MethodBinding.inl"
-#  include "VirtualMethodBinding.inl"
+//#  include "VirtualMethodBinding.inl"
 #  include "ConstructorBinding.inl"
 
   //*** BOUND DESTRUCTOR ***// Wraps a destructor call with the Zilch signature
@@ -840,9 +939,9 @@ public:
     //ZZ::TemplateBinding::FromMethod<decltype(OverloadResolution MethodPointer), MethodPointer>(ZilchBuilder, ZilchType, Name, SpaceDelimitedParameterNames, OverloadResolution(MethodPointer))
 
 // Workhorse macro for binding virtual methods
-#  define ZilchFullBindVirtualMethod(ZilchBuilder, ZilchType, MethodPointer, NameOrNull)                               \
-    ZZ::TemplateBinding::FromVirtual<decltype(MethodPointer), MethodPointer>(                                          \
-        ZilchBuilder, ZilchType, Name, SpaceDelimitedParameterNames, (MethodPointer))
+#  define ZilchFullBindVirtualMethod(ZilchBuilder, ZilchType, MethodPointer, Name, SpaceDelimitedParameterNames)                               \
+    ZZ::TemplateBinding::FunctionBinding<decltype(MethodPointer)>::template MakeVirtualFunction<MethodPointer>(ZilchBuilder, ZilchType, Name, SpaceDelimitedParameterNames)
+    //ZZ::TemplateBinding::FromVirtual<decltype(MethodPointer), MethodPointer>(ZilchBuilder, ZilchType, Name, SpaceDelimitedParameterNames, (MethodPointer))
 
 // Bind a constructor that takes any number of arguments
 // Due to the inability to get a 'member function pointer' to a constructor, the
