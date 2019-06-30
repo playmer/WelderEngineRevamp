@@ -178,23 +178,7 @@ public:
   HandleOf<PathFinderRequest> FindPathThreadedHelper(CopyOnWriteHandle<Algorithm>& algorithm,
                                                      const NodeKey& start,
                                                      const NodeKey& goal,
-                                                     size_t maxIterations)
-  {
-    typedef PathFinderJob<NodeKey, Algorithm> PathFinderAlgorithmJob;
-    PathFinderAlgorithmJob* job = new PathFinderAlgorithmJob();
-    PathFinderRequest* request = new PathFinderRequest(this, job);
-
-    job->mStart = start;
-    job->mGoal = goal;
-    job->mRequest = request;
-    job->mMainThreadPathFinder = this;
-    job->mMainThreadPathFinderDispatcher = GetDispatcher();
-    job->mAlgorithm = algorithm;
-    job->mMaxIterations = maxIterations;
-    Z::gJobs->AddJob(job);
-
-    return request;
-  }
+                                                     size_t maxIterations);
 
   template <typename NodeKey, typename Algorithm>
   HandleOf<PathFinderRequest> GenericFindPathThreadedHelper(CopyOnWriteHandle<Algorithm>& algorithm,
@@ -364,5 +348,27 @@ public:
   CopyOnWriteHandle<Algorithm> mAlgorithm;
   bool mCancel;
 };
+
+template <typename NodeKey, typename Algorithm>
+HandleOf<PathFinderRequest> PathFinder::FindPathThreadedHelper(CopyOnWriteHandle<Algorithm>& algorithm,
+                                                               const NodeKey& start,
+                                                               const NodeKey& goal,
+                                                               size_t maxIterations)
+{
+  typedef PathFinderJob<NodeKey, Algorithm> PathFinderAlgorithmJob;
+  PathFinderAlgorithmJob* job = new PathFinderAlgorithmJob();
+  PathFinderRequest* request = new PathFinderRequest(this, job);
+
+  job->mStart = start;
+  job->mGoal = goal;
+  job->mRequest = request;
+  job->mMainThreadPathFinder = this;
+  job->mMainThreadPathFinderDispatcher = GetDispatcher();
+  job->mAlgorithm = algorithm;
+  job->mMaxIterations = maxIterations;
+  Z::gJobs->AddJob(job);
+
+  return request;
+}
 
 } // namespace Zero

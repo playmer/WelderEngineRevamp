@@ -39,6 +39,7 @@ target_sources(Meta
     ${CMAKE_CURRENT_LIST_DIR}/NativeTypeConversion.hpp
     ${CMAKE_CURRENT_LIST_DIR}/Notification.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Notification.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/Notification.inl
     ${CMAKE_CURRENT_LIST_DIR}/Object.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Object.hpp
     ${CMAKE_CURRENT_LIST_DIR}/ObjectRestoreState.hpp

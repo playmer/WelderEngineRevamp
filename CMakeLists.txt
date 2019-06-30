@@ -20,6 +20,16 @@ endif()
 
 project(Welder)
 
+#option(WELDER_REVISION "WELDER_REVISION" )
+#option(WELDER_SHORT_CHANGESET "WELDER_SHORT_CHANGESET" )
+#option(WELDER_CHANGESET "WELDER_CHANGESET" )
+#option(WELDER_CHANGESET_DATE "WELDER_CHANGESET_DATE" )
+set(WELDER_ARCHITECTURE X64 CACHE STRING "Sets the WELDER_ARCHITECTURE")
+set(WELDER_HOSTOS Windows CACHE STRING "Sets the WELDER_HOSTOS")
+set(WELDER_TARGETOS Windows CACHE STRING "Sets the WELDER_TARGETOS")
+set(WELDER_PLATFORM Windows CACHE STRING "Sets the WELDER_PLATFORM")
+set(WELDER_TOOLCHAIN MSVC CACHE STRING "Sets the WELDER_TOOLCHAIN")
+
 add_definitions(-DWelderRevisionId=${WELDER_REVISION})
 add_definitions(-DWelderShortChangeSet=${WELDER_SHORT_CHANGESET})
 add_definitions(-DWelderChangeSet=${WELDER_CHANGESET})
@@ -144,11 +154,15 @@ set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL      "${CMAKE_SHARED_LINKER_FLAGS_MINSI
 set(CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL      "${CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL}      ${WELDER_LINKER_FLAGS_MINSIZEREL}")
 set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL         "${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL}         ${WELDER_LINKER_FLAGS_MINSIZEREL}")
 
+add_subdirectory(External)
+
+# We don't want to set this for our external libraries.
+set(CMAKE_CXX_FLAGS                           "${CMAKE_CXX_FLAGS}                           -permissive- -std:c++17")
+
 #Windows
 #Emscripten
 #SDLSTDEmpty
 #Stub
 add_subdirectory(Libraries/Platform/${WELDER_PLATFORM})
 
-add_subdirectory(External)
 add_subdirectory(Libraries)

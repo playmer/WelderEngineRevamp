@@ -4,23 +4,8 @@
 namespace Zero
 {
 
-namespace Events
-{
-DeclareEvent(Notify);
-}
-
 DeclareEnum3(NotifyType, Error, Warning, General);
 DeclareEnum2(NotifyException, None, Script);
-
-class NotifyEvent : public Event
-{
-public:
-  ZilchDeclareType(NotifyEvent, TypeCopyMode::ReferenceType);
-  NotifyType::Enum Type;
-  String Name;
-  String Message;
-  String Icon;
-};
 
 #define DoNotifyOnce(title, message, icon)                                                                             \
   {                                                                                                                    \

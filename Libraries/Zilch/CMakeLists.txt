@@ -13,6 +13,7 @@ target_sources(Zilch
     ${CMAKE_CURRENT_LIST_DIR}/Base64.hpp
     ${CMAKE_CURRENT_LIST_DIR}/Binding.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Binding.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/Binding.inl
     ${CMAKE_CURRENT_LIST_DIR}/CodeGenerator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/CodeGenerator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/CodeLocation.cpp

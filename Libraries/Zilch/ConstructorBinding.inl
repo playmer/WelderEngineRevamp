@@ -356,6 +356,49 @@ static Function* FromConstructor(LibraryBuilder& builder, BoundType* classBoundT
   ParseParameterArrays(parameters, spaceDelimitedNames);
   return builder.AddBoundConstructor(classBoundType, boundFunction, parameters);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 template <typename Class,
           typename Arg0,
           typename Arg1,

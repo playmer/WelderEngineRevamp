@@ -742,31 +742,6 @@ Handle::Handle(const T& value, HandleManager* manager, ExecutableState* state)
 }
 
 template <typename T>
-T Handle::Get(GetOptions::Enum options) const
-{
-  if (this->StoredType == nullptr)
-  {
-    ErrorIf(options == GetOptions::AssertOnNull, "The value inside the Handle was null");
-    return T();
-  }
-
-  // Check if we can directly convert the stored type into the requested type
-  // This supports derived -> base class casting (but not visa versa), enums to
-  // integers, etc
-  BoundType* toType = ZilchTypeId(T);
-  if (this->StoredType->IsRawCastableTo(toType) == false)
-  {
-    ErrorIf(options == GetOptions::AssertOnNull,
-            "There was a value inside the Handle of type '%s' but it cannot be "
-            "converted",
-            this->StoredType->Name.c_str());
-    return T();
-  }
-
-  return InternalReadRef<T>((byte*)this);
-}
-
-template <typename T>
 HandleOf<T>::HandleOf()
 {
 }
@@ -1172,28 +1147,14 @@ template <typename ZilchSelf, typename SetupFunction>
 void SetupType(LibraryBuilder& builder,
                BoundType* type,
                SetupFunction setupType,
-               P_ENABLE_IF(HasZilchSetupType<ZilchSelf>::value))
-{
-  builder.AddNativeBoundType(type, ZilchTypeId(typename ZilchSelf::ZilchBase), ZilchSelf::ZilchCopyMode);
-  if (setupType != nullptr)
-    setupType(nullptr, builder, type);
-  ZilchSelf::ZilchSetupType(builder, type);
-};
+               P_ENABLE_IF(HasZilchSetupType<ZilchSelf>::value));
+
 
 template <typename ZilchSelf, typename SetupFunction>
 void SetupType(LibraryBuilder& builder,
                BoundType* type,
                SetupFunction setupType,
-               P_DISABLE_IF(HasZilchSetupType<ZilchSelf>::value))
-{
-  ErrorIf(setupType == nullptr,
-          "No setup function provided for externally BoundType %s. "
-          "Be sure you are calling the correct initialize function: "
-          "ZilchInitializeExternalType,"
-          "ZilchInitializeRange, or ZilchInitializeEnum.",
-          type->Name.c_str());
-  setupType(nullptr, builder, type);
-};
+               P_DISABLE_IF(HasZilchSetupType<ZilchSelf>::value));
 
 // This function gets called when the static library we belong to is built
 template <typename InitializingType, typename StaticLibraryType, typename SetupFunction>

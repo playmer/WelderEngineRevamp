@@ -5,6 +5,8 @@
 #ifndef ZILCH_PRECOMPILED_HPP
 #  define ZILCH_PRECOMPILED_HPP
 
+#include <type_traits>
+
 // Zero includes
 #  include "Common/CommonStandard.hpp"
 #  include "PlatformStandard.hpp"
@@ -285,6 +287,7 @@ String GetDocumentationCStringOrEmpty(cstr string);
 #  include "HandleManager.hpp"
 #  include "Timer.hpp"
 #  include "ExecutableState.hpp"
+#  include "Binding.inl"
 #  include "Any.hpp"
 #  include "FilePathClass.hpp"
 #  include "StreamInterface.hpp"

@@ -86,12 +86,12 @@ uint GetPatchVersion()
 
 uint GetRevisionNumber()
 {
-  return WelderRevisionId;
+  return 0;// WelderRevisionId;
 }
 
 u64 GetShortChangeSet()
 {
-  return WrapHex(WelderShortChangeSet);
+  return 0;// WrapHex(WelderShortChangeSet);
 }
 
 cstr GetMajorVersionString()
@@ -111,7 +111,7 @@ cstr GetPatchVersionString()
 
 cstr GetRevisionNumberString()
 {
-  return Stringify(WelderRevisionId);
+  return "";//Stringify(WelderRevisionId);
 }
 
 String GetBuildIdString()
@@ -130,17 +130,17 @@ String GetBuildIdString()
 
 cstr GetShortChangeSetString()
 {
-  return Stringify(WelderShortChangeSet);
+  return "";//Stringify(WelderShortChangeSet);
 }
 
 cstr GetChangeSetString()
 {
-  return Stringify(WelderChangeSet);
+  return "";// Stringify(WelderChangeSet);
 }
 
 cstr GetChangeSetDateString()
 {
-  return WelderChangeSetDate;
+  return "";//WelderChangeSetDate;
 }
 
 cstr GetConfigurationString()

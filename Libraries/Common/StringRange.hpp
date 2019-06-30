@@ -1,6 +1,20 @@
 // MIT Licensed (see LICENSE.md).
 #pragma once
 
+#include <malloc.h>
+
+//+WELDER
+// Making this check more portable.
+#if __has_include(<alloca.h>)
+//-WELDER
+#  include <alloca.h>
+#else
+// Temporary MSVC Fix (Potentially related to /permissive-)
+#  if defined(_MSC_VER) && !defined(alloca)
+#    define alloca _alloca
+#  endif
+#endif
+
 #include "Hashing.hpp"
 #include "String.hpp"
 

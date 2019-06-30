@@ -79,13 +79,13 @@ public:
 
   T* operator->() const
   {
-    ReturnIf(mData == nullptr, nullptr, "Attempting to arrow -> off an invalid CopyOnWriteHandle");
+    //ReturnIf(mData == nullptr, nullptr, "Attempting to arrow -> off an invalid CopyOnWriteHandle");
     return &mData->mObject;
   }
 
   T& operator*() const
   {
-    ReturnIf(mData == nullptr, *nullptr, "Attempting to dereference * off an invalid CopyOnWriteHandle");
+    //ReturnIf(mData == nullptr, *nullptr, "Attempting to dereference * off an invalid CopyOnWriteHandle");
     return mData->mObject;
   }
 
@@ -98,7 +98,7 @@ public:
   // This only copies if the reference count is 1 (meaning we own the object).
   void CopyIfNeeded()
   {
-    ReturnIf(!mData, , "The handle did not point at any data so a copy is not possible");
+    //ReturnIf(!mData, , "The handle did not point at any data so a copy is not possible");
 
     Lock stackLock(mData->mLock);
     // If we have the only reference count then we don't need to copy

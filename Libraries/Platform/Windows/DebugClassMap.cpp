@@ -32,7 +32,7 @@ public:
 
   String GetSymbolName(uint classIndex)
   {
-    wchar_t* text = L"";
+    const wchar_t* text = L"";
     VerifyWin(SymGetTypeInfo(mProcess, mModuleBase, (ULONG)classIndex, TI_GET_SYMNAME, &text));
 
     char* asciiText = (char*)alloca(MAX_SYM_NAME);
