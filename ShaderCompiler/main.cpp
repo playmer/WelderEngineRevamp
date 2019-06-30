@@ -67,12 +67,7 @@ void RealMain()
 
   //Details::SelectOverload<void (*)()>(&Zilch::Console::WriteLine);
   //BoundFn boundFunction = TemplateBinding::FunctionBinding<void (*)()>::template Function<Details::SelectOverload<void (*)()>(&Zilch::Console::WriteLine)>();
-  Function* function = TemplateBinding::FunctionBinding<void (*)()>::template MakeFunction<Details::SelectOverload<void (*)()>(&Zilch::Console::WriteLine)>(
-    builder,
-    classBoundType,
-    "",
-    ""
-    );
+  Function* function = TemplateBinding::FunctionBinding<void (*)()>::template MakeFunction<Details::SelectOverload<void (*)()>(&Zilch::Console::WriteLine)>(builder, classBoundType, "", "");
 
   ZilchSetup mZilchSetup;
   Module mModule;

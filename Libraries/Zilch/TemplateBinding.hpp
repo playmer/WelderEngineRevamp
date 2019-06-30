@@ -64,6 +64,12 @@ struct DecomposeFunctionObjectType
 };
 
 template <typename Return, typename... Arguments>
+struct DecomposeFunctionObjectType<Return (Arguments...)>
+{
+  using ReturnType = Return;
+};
+
+template <typename Return, typename... Arguments>
 struct DecomposeFunctionObjectType<Return (*)(Arguments...)>
 {
   using ReturnType = Return;
@@ -828,10 +834,9 @@ public:
 #  define ZilchNoOverload
 
 // Workhorse macro for binding methods
-#  define ZilchFullBindMethod(                                                                                         \
-      ZilchBuilder, ZilchType, MethodPointer, OverloadResolution, Name, SpaceDelimitedParameterNames)                  \
-    ZZ::TemplateBinding::FromMethod<decltype(OverloadResolution MethodPointer), MethodPointer>(                        \
-        ZilchBuilder, ZilchType, Name, SpaceDelimitedParameterNames, OverloadResolution(MethodPointer))
+#  define ZilchFullBindMethod(ZilchBuilder, ZilchType, MethodPointer, OverloadResolution, Name, SpaceDelimitedParameterNames) \
+    ZZ::TemplateBinding::FunctionBinding<decltype(OverloadResolution MethodPointer)>::template MakeFunction<OverloadResolution(MethodPointer)>(ZilchBuilder, ZilchType, Name, SpaceDelimitedParameterNames)
+    //ZZ::TemplateBinding::FromMethod<decltype(OverloadResolution MethodPointer), MethodPointer>(ZilchBuilder, ZilchType, Name, SpaceDelimitedParameterNames, OverloadResolution(MethodPointer))
 
 // Workhorse macro for binding virtual methods
 #  define ZilchFullBindVirtualMethod(ZilchBuilder, ZilchType, MethodPointer, NameOrNull)                               \
