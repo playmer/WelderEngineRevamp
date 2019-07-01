@@ -52,7 +52,7 @@ template <typename tType>
 using GetBindingType = typename Zilch::TypeBinding::StaticTypeId<tType>::BindingType;
 
 template <typename tType>
-static BoundType*& GetStaticType()
+static auto GetStaticType() -> decltype(TypeBinding::StaticTypeId<Type>::GetType())
 {
   return TypeBinding::StaticTypeId<Type>::GetType();
 }
@@ -130,7 +130,8 @@ public:
   template <typename... tArguments>
   static void BuildParameterArrays(ParameterArray& parameters)
   {
-    (parameters.PushBack(Details::GetStaticType<tArguments>()), ...);
+    //(parameters.PushBack(Details::GetStaticType<tArguments>()), ...);
+    (parameters.PushBack(ZilchTypeId(tArguments)), ...);
   }
 
   // Validate that a destructor has been bound (asserts within binding
@@ -160,6 +161,8 @@ public:
     template <typename tReturn, typename... tArguments>
     struct FunctionInvoker<tReturn(tArguments...), EnableIf::IsNotVoid<tReturn>>
     {
+      constexpr static FunctionOptions::Flags sFunctionOption = FunctionOptions::Static;
+
       static void ParameterArrayBuilder(ParameterArray& parameters)
       {
         BuildParameterArrays<tArguments...>(parameters);
@@ -211,6 +214,8 @@ public:
     template <typename tReturn, typename... tArguments>
     struct FunctionInvoker<tReturn(tArguments...), EnableIf::IsVoid<tReturn>>
     {
+      constexpr static FunctionOptions::Flags sFunctionOption = FunctionOptions::Static;
+
       static void ParameterArrayBuilder(ParameterArray& parameters)
       {
         BuildParameterArrays<tArguments...>(parameters);
@@ -301,6 +306,8 @@ public:
     template <typename tReturn, typename tObject, typename... tArguments>
     struct FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsNotVoid<tReturn>>
     {
+      constexpr static FunctionOptions::Flags sFunctionOption = FunctionOptions::None;
+
       static void ParameterArrayBuilder(ParameterArray& parameters)
       {
         BuildParameterArrays<tArguments...>(parameters);
@@ -384,6 +391,8 @@ public:
     template <typename tReturn, typename tObject, typename... tArguments>
     struct FunctionInvoker<tReturn (tObject::*)(tArguments...), EnableIf::IsVoid<tReturn>>
     {
+      constexpr static FunctionOptions::Flags sFunctionOption = FunctionOptions::None;
+
       static void ParameterArrayBuilder(ParameterArray& parameters)
       {
         BuildParameterArrays<tArguments...>(parameters);
@@ -516,10 +525,12 @@ public:
       BoundFn boundFunction = GetFunctionInvoker<aFunction>();
       ParameterArray parameters;
       FunctionInvoker<tFunctionSignature>::ParameterArrayBuilder(parameters);
+      auto options = FunctionInvoker<tFunctionSignature>::sFunctionOption;
+      auto returnType = Details::GetStaticType<tReturnType>();
 
       ParseParameterArrays(parameters, spaceDelimitedNames);
       return builder.AddBoundFunction(
-          classBoundType, name, boundFunction, parameters, Details::GetStaticType<tReturnType>(), FunctionOptions::None);
+          classBoundType, name, boundFunction, parameters, returnType, options);
     }
 
     
@@ -531,6 +542,7 @@ public:
       using tReturnType = typename Details::DecomposeFunctionObjectType<tFunctionSignature>::ReturnType;
       BoundFn boundFunction = GetFunctionInvoker<aFunction>();
       auto thunk = GetVirtualFunctionInvoker<aFunction>();
+      auto returnType = Details::GetStaticType<tReturnType>();
 
       ParameterArray parameters;
       FunctionInvoker<tFunctionSignature>::ParameterArrayBuilder(parameters);
@@ -546,7 +558,7 @@ public:
                                                   name,
                                                   boundFunction,
                                                   parameters,
-                                                  Details::GetStaticType<tReturnType>(),
+                                                  returnType,
                                                   FunctionOptions::Virtual,
                                                   nativeVirtual);
 

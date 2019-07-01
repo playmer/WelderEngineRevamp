@@ -937,6 +937,11 @@ BoundType* LibraryBuilder::AddBoundType(StringParam baseName,
                                         size_t size,
                                         size_t nativeVirtualCount)
 {
+  if (baseName == "ColorOutput")
+  {
+    __debugbreak();
+  }
+
   // Create a new bound type with the given name / size
   BoundType* type = new BoundType(nullptr);
   type->Name = fullyQualifiedName;

@@ -410,7 +410,7 @@ function determineCmakeCombo(options)
   {
     Windows:
     {
-      builder: 'Visual Studio 15 2017',
+      builder: 'Visual Studio 16 2019',
       toolchain: 'MSVC',
       platform: 'Windows',
       architecture: 'X64',
@@ -536,6 +536,7 @@ async function cmake(options)
 
   if (combo.toolchain === 'MSVC' && combo.architecture === 'X64')
   {
+    architectureArgs.push('-Ax64');
     architectureArgs.push('-DCMAKE_GENERATOR_PLATFORM=x64');
     architectureArgs.push('-T');
     architectureArgs.push('host=x64');
