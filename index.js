@@ -16,7 +16,7 @@ const commandExists = require('command-exists').sync;
 
 const bytesPerMb = 1024 * 1024;
 
-let system;
+let hostos;
 let executableExtension = '';
 
 function initialize()
@@ -24,14 +24,14 @@ function initialize()
   switch (os.platform())
   {
   case 'win32':
-    system = 'windows';
+    hostos = 'windows';
     executableExtension = '.exe';
     break;
   case 'darwin':
-    system = 'mac';
+    hostos = 'mac';
     break;
   default:
-    system = 'linux';
+    hostos = 'linux';
     break;
   }
 }
@@ -412,7 +412,7 @@ async function installProgram(info)
     }
   }
 
-  const settings = info[system];
+  const settings = info[hostos];
   if (settings)
   {
     let filePath = null;
@@ -427,7 +427,7 @@ async function installProgram(info)
   }
   else
   {
-    printError(`installProgram: Unhandled system ${system} for ${info.name}`);
+    printError(`installProgram: Unhandled hostos ${hostos} for ${info.name}`);
   }
 
   if (info.check)
@@ -796,6 +796,16 @@ async function runCmake(options)
       platform: 'Windows',
       architecture: 'X64',
       configuration: 'Any',
+      targetos: 'Windows',
+    },
+    Linux:
+    {
+      builder: 'Ninja',
+      toolchain: 'Clang',
+      platform: 'SDLSTDEmpty',
+      architecture: 'ANY',
+      config: 'Release',
+      targetos: 'Linux',
     },
     emscripten:
     {
@@ -804,6 +814,7 @@ async function runCmake(options)
       platform: 'Emscripten',
       architecture: 'WASM',
       configuration: 'Release',
+      targetos: 'Emscripten',
     },
     empty:
     {
@@ -812,10 +823,11 @@ async function runCmake(options)
       platform: 'Stub',
       architecture: 'ANY',
       configuration: 'Release',
+      targetos: hostos,
     },
   };
 
-  const combo = aliases[options.alias ? options.alias : system];
+  const combo = aliases[options.alias ? options.alias : hostos];
 
   // Allow options to override builder, toolchian, etc.
   // It is the user's responsibility to ensure this is a valid combination.
@@ -824,13 +836,11 @@ async function runCmake(options)
   let builderArgs = [];
   let toolchainArgs = [];
   let architectureArgs = [];
-  let configurationArgs = [];
+  const configArgs = [];
 
   if (combo.builder === 'Ninja')
   {
-    builderArgs = [
-      `-DCMAKE_MAKE_PROGRAM=${paths.ninja}`,
-    ];
+    builderArgs.push('-DCMAKE_MAKE_PROGRAM=ninja');
   }
 
   if (combo.toolchain === 'Emscripten')
@@ -841,39 +851,37 @@ async function runCmake(options)
     }
 
     const toolchainFile = path.join(process.env.EMSCRIPTEN, 'cmake/Modules/Platform/Emscripten.cmake');
-    toolchainArgs = [
-      `-DCMAKE_TOOLCHAIN_FILE=${toolchainFile}`,
-      '-DEMSCRIPTEN_GENERATE_BITCODE_STATIC_LIBRARIES=1',
-    ];
+    toolchainArgs.push(`-DCMAKE_TOOLCHAIN_FILE=${toolchainFile}`);
+    toolchainArgs.push('-DEMSCRIPTEN_GENERATE_BITCODE_STATIC_LIBRARIES=1');
   }
 
   if (combo.toolchain === 'Clang')
   {
-    toolchainArgs = [
-      '-DCMAKE_SYSTEM_NAME=Generic',
-      `-DCMAKE_C_COMPILER:PATH=${paths.clang}`,
-      `-DCMAKE_CXX_COMPILER:PATH=${paths.clangXX}`,
-      '-DCMAKE_C_COMPILER_ID=Clang',
-      '-DCMAKE_CXX_COMPILER_ID=Clang',
-      `-DCMAKE_LINKER=${paths.lld}`,
-      `-DCMAKE_AR=${paths.llvmAr}`,
-    ];
+    if (hostos === 'Windows')
+    {
+      // CMake on Windows tries to do a bunch of detection thinking that it will be using MSVC.
+      toolchainArgs.push('-DCMAKE_SYSTEM_NAME=Generic');
+    }
+
+    toolchainArgs.push('-DCMAKE_C_COMPILER:PATH=clang');
+    toolchainArgs.push('-DCMAKE_CXX_COMPILER:PATH=clang++');
+    toolchainArgs.push('-DCMAKE_C_COMPILER_ID=Clang');
+    toolchainArgs.push('-DCMAKE_CXX_COMPILER_ID=Clang');
+    toolchainArgs.push('-DCMAKE_LINKER=lld');
+    toolchainArgs.push('-DCMAKE_AR=/usr/bin/llvm-ar');
   }
 
   if (combo.toolchain === 'MSVC' && combo.architecture === 'X64')
   {
-    architectureArgs = [
-      '-DCMAKE_GENERATOR_PLATFORM=x64',
-      '-T', 'host=x64',
-    ];
+    architectureArgs.push('-DCMAKE_GENERATOR_PLATFORM=x64');
+    architectureArgs.push('-T');
+    architectureArgs.push('host=x64');
   }
 
   if (combo.toolchain !== 'MSVC')
   {
-    configurationArgs = [
-      `-DCMAKE_BUILD_TYPE=${combo.configuration}`,
-      '-DCMAKE_EXPORT_COMPILE_COMMANDS=1',
-    ];
+    configArgs.push(`-DCMAKE_BUILD_TYPE=${combo.config}`);
+    configArgs.push('-DCMAKE_EXPORT_COMPILE_COMMANDS=1');
   }
 
   const cmakeArgs = [
@@ -888,7 +896,9 @@ async function runCmake(options)
     `-DWELDER_PLATFORM=${combo.platform}`,
     `-DWELDER_ARCHITECTURE=${combo.architecture}`,
     ...architectureArgs,
-    ...configurationArgs,
+    ...configArgs,
+    `-DWELDER_HOSTOS=${hostos}`,
+    `-DWELDER_TARGETOS=${combo.targetos}`,
     dirs.root,
   ];
 
@@ -986,7 +996,7 @@ async function createImage()
 {
   console.log('Creating');
   makeAllDirs();
-  const imagePath = path.join(dirs.tempImages, `image-${system}.zip`);
+  const imagePath = path.join(dirs.tempImages, `image-${hostos}.zip`);
   safeDeleteFile(imagePath);
 
   const output = fs.createWriteStream(imagePath);
