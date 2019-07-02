@@ -1,19 +1,43 @@
-cmake_minimum_required(VERSION 3.13.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12.1 FATAL_ERROR)
 
-add_definitions(-DWelderRevisionId=${WELDER_REVISION})
-add_definitions(-DWelderShortChangeSet=${WELDER_SHORT_CHANGESET})
-add_definitions(-DWelderChangeSet=${WELDER_CHANGESET})
-add_definitions(-DWelderChangeSetDate=${WELDER_CHANGESET_DATE})
+# There is a problem with clang using the default gcc headers on Ubuntu (remove #error).
+add_definitions(-D__STDC__)
 
 set(CMAKE_CONFIGURATION_TYPES Debug RelWithDebInfo Release MinSizeRel)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT WelderEditor)
 
+find_program(WELDER_IWYU_PATH NAMES include-what-you-use iwyu)
+if(WELDER_IWYU_PATH)
+  message(STATUS "Found iwyu at ${WELDER_IWYU_PATH}")
+endif()
+
+find_program(WELDER_CCACHE_PATH ccache)
+if(WELDER_CCACHE_PATH)
+  message(STATUS "Found ccache at ${WELDER_CCACHE_PATH}")
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${WELDER_CCACHE_PATH}")
+endif()
+
 project(Welder)
-add_definitions(-DPLATFORM_ARCHITECTURE="${WELDER_ARCHITECTURE}")
+
+add_definitions(-DWelderRevisionId=${WELDER_REVISION})
+add_definitions(-DWelderShortChangeSet=${WELDER_SHORT_CHANGESET})
+add_definitions(-DWelderChangeSet=${WELDER_CHANGESET})
+add_definitions(-DWelderChangeSetDate=${WELDER_CHANGESET_DATE})
+add_definitions(-DWelderArchitectureName="${WELDER_ARCHITECTURE}")
+add_definitions(-DWelderHostOs${WELDER_HOSTOS}=1)
+add_definitions(-DWelderHostOsName="${WELDER_HOSTOS}")
+add_definitions(-DWelderTargetOs${WELDER_TARGETOS}=1)
+add_definitions(-DWelderTargetOsName="${WELDER_TARGETOS}")
+add_definitions(-DWelderPlatform${WELDER_PLATFORM}=1)
+add_definitions(-DWelderPlatformName="${WELDER_PLATFORM}")
+add_definitions(-DWelderToolchain${WELDER_TOOLCHAIN}=1)
+add_definitions(-DWelderToolchainName="${WELDER_TOOLCHAIN}")
 
 set(WELDER_CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(WELDER_CMAKE_DIR ${WELDER_CORE_DIR}/CMakeFiles/)
+set(WELDER_TOOLCHAIN_DIR ${WELDER_CMAKE_DIR}/Toolchain/)
+set(WELDER_TARGETOS_DIR ${WELDER_CMAKE_DIR}/TargetOs/)
 set(WELDER_LIBRARIES_DIR ${WELDER_CORE_DIR}/Libraries/)
 set(WELDER_PLATFORM_DATA_DIR ${WELDER_CORE_DIR}/PlatformData/${WELDER_TOOLCHAIN})
 set(WELDER_VIRTUAL_FILE_SYSTEM_ZIP ${CMAKE_BINARY_DIR}/FileSystem.zip)
@@ -29,6 +53,7 @@ add_custom_target(VirtualFileSystemZip
 
 function(welder_setup_library target directory)
   target_include_directories(${target} PUBLIC ${directory} ${WELDER_LIBRARIES_DIR})
+  #set_property(TARGET ${target} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${WELDER_IWYU_PATH})
 endfunction()
 
 function(welder_get_all_dependencies outputList TARGET)
@@ -76,7 +101,8 @@ endfunction()
 
 #Emscripten
 #MSVC
-include(${WELDER_CMAKE_DIR}/${WELDER_TOOLCHAIN}.cmake)
+include(${WELDER_TOOLCHAIN_DIR}/${WELDER_TOOLCHAIN}.cmake)
+include(${WELDER_TARGETOS_DIR}/${WELDER_TARGETOS}.cmake)
 
 set(CMAKE_C_FLAGS                             "${CMAKE_C_FLAGS}                             ${WELDER_C_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS                           "${CMAKE_CXX_FLAGS}                           ${WELDER_C_CXX_FLAGS}")
@@ -121,7 +147,7 @@ set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL         "${CMAKE_EXE_LINKER_FLAGS_MINSIZER
 #Windows
 #Emscripten
 #SDLSTDEmpty
-#Empty
+#Stub
 add_subdirectory(Libraries/Platform/${WELDER_PLATFORM})
 
 add_subdirectory(External)

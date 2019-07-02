@@ -287,8 +287,12 @@ void Engine::LoadingStart()
   if (!mHaveLoadingResources || !SupportsRenderingOutsideMainLoop)
     return;
 
-  Event toSend;
-  DispatchEvent(Events::LoadingStart, &toSend);
+  ++mLoadingCount;
+  if (mLoadingCount == 1)
+  {
+    Event toSend;
+    DispatchEvent(Events::LoadingStart, &toSend);
+  }
 }
 
 void Engine::LoadingUpdate(StringParam operation,
@@ -297,7 +301,7 @@ void Engine::LoadingUpdate(StringParam operation,
                            ProgressType::Enum progressType,
                            float percentage)
 {
-  if (!mHaveLoadingResources || !SupportsRenderingOutsideMainLoop)
+  if (!mHaveLoadingResources || !SupportsRenderingOutsideMainLoop || mLoadingCount == 0)
     return;
 
   ProgressEvent progressEvent;
@@ -312,11 +316,15 @@ void Engine::LoadingUpdate(StringParam operation,
 
 void Engine::LoadingFinish()
 {
-  if (!mHaveLoadingResources || !SupportsRenderingOutsideMainLoop)
+  if (!mHaveLoadingResources || !SupportsRenderingOutsideMainLoop || mLoadingCount == 0)
     return;
 
-  Event toSend;
-  DispatchEvent(Events::LoadingFinish, &toSend);
+  if (mLoadingCount == 1)
+  {
+    Event toSend;
+    DispatchEvent(Events::LoadingFinish, &toSend);
+  }
+  --mLoadingCount;
 }
 
 InputDevice::Enum Engine::GetCurrentInputDevice()
@@ -365,7 +373,8 @@ void Engine::CrashEngine()
 {
   memset((void*)Z::gEngine, 0xffffff, 9999);
   memset((void*)Z::gTracker, 0xffffff, 9999);
-  memset(nullptr, 0xffffff, 9999);
+  Z::gEngine = nullptr;
+  memset((void*)Z::gEngine, 0xffffff, 9999);
 }
 
 bool Engine::IsReadOnly()
